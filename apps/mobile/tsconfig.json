@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-native",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "types": ["react-native", "node"],
+    "paths": {
+      "@/*": ["src/*"],
+      "@magnax/shared": ["../../packages/shared/src/index.ts"],
+      "@magnax/shared/*": ["../../packages/shared/src/*"]
+    }
+  },
+  "include": ["src/**/*", "App.tsx", "index.ts"],
+  "exclude": ["node_modules", ".expo", "dist"]
+}
