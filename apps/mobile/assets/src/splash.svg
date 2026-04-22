@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1242" height="2688" viewBox="0 0 1242 2688">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="80%">
+      <stop offset="0%" stop-color="#1F4370"/>
+      <stop offset="55%" stop-color="#1B3A5C"/>
+      <stop offset="100%" stop-color="#0A1B30"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1A8A7D" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#1A8A7D" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="0" y="0" width="1242" height="2688" fill="url(#bg)"/>
+
+  <!-- Centered mark -->
+  <g transform="translate(621 1180)">
+    <circle cx="0" cy="0" r="240" fill="none" stroke="#1A8A7D" stroke-width="4" opacity="0.4"/>
+    <circle cx="0" cy="0" r="180" fill="url(#glow)"/>
+    <path d="M -180 140 L -92 -120 L 0 40 L 92 -120 L 180 140"
+          fill="none"
+          stroke="#FFFFFF"
+          stroke-width="34"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+    <circle cx="0" cy="0" r="30" fill="#1A8A7D"/>
+    <circle cx="0" cy="0" r="12" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="621" y="1520"
+        font-family="Inter, -apple-system, Helvetica, Arial, sans-serif"
+        font-size="140"
+        font-weight="700"
+        text-anchor="middle"
+        letter-spacing="-4"
+        fill="#FFFFFF">MagnaX</text>
+
+  <text x="621" y="1595"
+        font-family="Inter, -apple-system, Helvetica, Arial, sans-serif"
+        font-size="34"
+        font-weight="500"
+        text-anchor="middle"
+        letter-spacing="8"
+        fill="#8FA9C2">by SymmetryX Technologies</text>
+</svg>
