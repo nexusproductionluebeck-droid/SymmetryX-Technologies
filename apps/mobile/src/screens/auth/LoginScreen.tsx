@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { Button } from '@/components/Button';
-import { useTheme } from '@/theme/ThemeProvider';
+import { GlassCard } from '@/components/GlassCard';
 import type { RootScreenProps } from '@/navigation/types';
 
 export function LoginScreen({ navigation }: RootScreenProps<'Login'>) {
-  const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -15,81 +17,95 @@ export function LoginScreen({ navigation }: RootScreenProps<'Login'>) {
 
   const handleLogin = async () => {
     setBusy(true);
-    // Simulated auth — real version swaps in Supabase/Firebase session flow.
     await new Promise((resolve) => setTimeout(resolve, 400));
     setBusy(false);
     navigation.reset({ index: 0, routes: [{ name: 'SetupProduct' }] });
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      <Text style={[styles.heading, { color: theme.colors.textPrimary }]}>Willkommen zurück</Text>
-      <Text style={[styles.subheading, { color: theme.colors.textSecondary }]}>
-        Melde dich an, um dein Zuhause zu verwalten.
-      </Text>
+    <View style={styles.container}>
+      <AnimatedBackground />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={[styles.inner, { paddingTop: insets.top + 60 }]}
+      >
+        <Text style={styles.eyebrow}>MAGNAX</Text>
+        <Text style={styles.heading}>Willkommen zurück</Text>
+        <Text style={styles.subheading}>
+          Melde dich an, um dein Zuhause zu verwalten.
+        </Text>
 
-      <View style={styles.field}>
-        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>E-Mail</Text>
-        <TextInput
-          style={[styles.input, { color: theme.colors.textPrimary, borderColor: theme.colors.border }]}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="du@beispiel.de"
-          placeholderTextColor={theme.colors.textSecondary}
-        />
-      </View>
+        <GlassCard style={{ marginTop: 28 }}>
+          <View style={styles.field}>
+            <Text style={styles.label}>E-Mail</Text>
+            <TextInput
+              style={styles.input}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="du@beispiel.de"
+              placeholderTextColor="rgba(232,238,243,0.35)"
+            />
+          </View>
+          <View style={[styles.field, { marginTop: 14 }]}>
+            <Text style={styles.label}>Passwort</Text>
+            <TextInput
+              style={styles.input}
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+              placeholder="••••••••"
+              placeholderTextColor="rgba(232,238,243,0.35)"
+            />
+          </View>
+        </GlassCard>
 
-      <View style={styles.field}>
-        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Passwort</Text>
-        <TextInput
-          style={[styles.input, { color: theme.colors.textPrimary, borderColor: theme.colors.border }]}
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-          placeholder="••••••••"
-          placeholderTextColor={theme.colors.textSecondary}
-        />
-      </View>
+        <View style={{ height: 18 }} />
+        <Button label="Anmelden" onPress={handleLogin} disabled={!canSubmit} loading={busy} />
 
-      <Button label="Anmelden" onPress={handleLogin} disabled={!canSubmit} loading={busy} />
+        <View style={styles.divider}>
+          <View style={styles.line} />
+          <Text style={styles.or}>oder</Text>
+          <View style={styles.line} />
+        </View>
 
-      <View style={styles.divider}>
-        <View style={[styles.line, { backgroundColor: theme.colors.border }]} />
-        <Text style={[styles.or, { color: theme.colors.textSecondary }]}>oder</Text>
-        <View style={[styles.line, { backgroundColor: theme.colors.border }]} />
-      </View>
-
-      <Button label="Mit Apple fortfahren" variant="secondary" onPress={handleLogin} />
-      <View style={{ height: 8 }} />
-      <Button label="Mit Google fortfahren" variant="secondary" onPress={handleLogin} />
-    </KeyboardAvoidingView>
+        <Button label="Mit Apple fortfahren" variant="secondary" onPress={handleLogin} />
+        <View style={{ height: 10 }} />
+        <Button label="Mit Google fortfahren" variant="secondary" onPress={handleLogin} />
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24 },
-  heading: { fontSize: 28, fontWeight: '700', marginBottom: 6 },
-  subheading: { fontSize: 15, marginBottom: 24 },
-  field: { marginBottom: 16 },
-  label: { fontSize: 13, marginBottom: 6 },
+  container: { flex: 1, backgroundColor: '#05090F' },
+  inner: { flex: 1, paddingHorizontal: 24 },
+  eyebrow: {
+    color: 'rgba(232,238,243,0.5)',
+    fontSize: 10,
+    letterSpacing: 2.5,
+    fontWeight: '600',
+  },
+  heading: { color: '#FFFFFF', fontSize: 30, fontWeight: '700', marginTop: 8, letterSpacing: -0.6 },
+  subheading: { color: 'rgba(232,238,243,0.65)', fontSize: 15, marginTop: 6 },
+  field: {},
+  label: {
+    color: 'rgba(232,238,243,0.55)',
+    fontSize: 11,
+    letterSpacing: 1.8,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
   input: {
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 14,
+    height: 44,
+    color: '#FFFFFF',
     fontSize: 16,
+    paddingHorizontal: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginVertical: 20,
-  },
-  line: { flex: 1, height: 1 },
-  or: { fontSize: 13, letterSpacing: 1.5 },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 18 },
+  line: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.08)' },
+  or: { color: 'rgba(232,238,243,0.5)', fontSize: 11, letterSpacing: 2 },
 });

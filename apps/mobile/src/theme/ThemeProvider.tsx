@@ -26,10 +26,12 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  // MagnaX is dark-first. The cockpit aesthetic is the product — the light
+  // theme is opt-in, not an OS-follower default.
   const system = useColorScheme();
-  const [override, setOverride] = useState<ThemeMode | 'system'>('system');
+  const [override, setOverride] = useState<ThemeMode | 'system'>('dark');
   const resolvedMode: ThemeMode =
-    override === 'system' ? (system === 'dark' ? 'dark' : 'light') : override;
+    override === 'system' ? (system === 'light' ? 'light' : 'dark') : override;
 
   const value = useMemo<ThemeContextValue>(() => {
     const theme: Theme = {

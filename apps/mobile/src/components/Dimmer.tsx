@@ -57,10 +57,15 @@ export function Dimmer({
     void Haptics.selectionAsync();
   }, []);
 
+  const startValue = useSharedValue(0);
+
   const pan = Gesture.Pan()
     .enabled(!disabled)
+    .onBegin(() => {
+      startValue.value = translate.value;
+    })
     .onUpdate((event) => {
-      const clamped = Math.max(0, Math.min(TRACK_WIDTH, translate.value + event.changeX));
+      const clamped = Math.max(0, Math.min(TRACK_WIDTH, startValue.value + event.translationX));
       translate.value = clamped;
       const next = Math.round(min + (clamped / TRACK_WIDTH) * range);
       runOnJS(emit)(next);

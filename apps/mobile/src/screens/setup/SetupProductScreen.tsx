@@ -1,94 +1,101 @@
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DEVICE_METADATA, type DeviceType } from '@magnax/shared';
 
+import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { Button } from '@/components/Button';
-import { useTheme } from '@/theme/ThemeProvider';
+import { GlassCard } from '@/components/GlassCard';
 import { useSetupStore } from '@/store/setupStore';
 import type { RootScreenProps } from '@/navigation/types';
 
 const AVAILABLE: DeviceType[] = ['pure', 'mesh', 'sense', 'sense-smoke', 'cam', 'stick'];
 
 export function SetupProductScreen({ navigation }: RootScreenProps<'SetupProduct'>) {
-  const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { productType, setProductType, advance } = useSetupStore();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Text style={[styles.intro, { color: theme.colors.textSecondary }]}>
-        Welche MagnaX-Variante hast du gekauft? Die App passt die nächsten Schritte automatisch an.
-      </Text>
+    <View style={styles.container}>
+      <AnimatedBackground />
+      <View style={[styles.inner, { paddingTop: insets.top + 60 }]}>
+        <Text style={styles.eyebrow}>SCHRITT 1 VON 5</Text>
+        <Text style={styles.title}>Welches MagnaX?</Text>
+        <Text style={styles.intro}>
+          Die nächsten Schritte passen sich automatisch an das gewählte Produkt an.
+        </Text>
 
-      <FlatList
-        data={AVAILABLE}
-        keyExtractor={(type) => type}
-        contentContainerStyle={{ paddingVertical: 8 }}
-        renderItem={({ item }) => {
-          const meta = DEVICE_METADATA[item];
-          const active = productType === item;
-          return (
-            <Pressable
-              onPress={() => setProductType(item)}
-              style={[
-                styles.card,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: active ? theme.palette.teal : theme.colors.border,
-                  borderWidth: active ? 2 : 1,
-                },
-              ]}
-            >
-              <View style={[styles.iconPill, { backgroundColor: theme.palette.navy }]}>
-                <Text style={styles.iconText}>{item[0]?.toUpperCase() ?? '?'}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.cardTitle, { color: theme.colors.textPrimary }]}>{meta.label}</Text>
-                <Text style={[styles.cardBody, { color: theme.colors.textSecondary }]}>
-                  {meta.tagline}
-                </Text>
-              </View>
-              {meta.priceEur !== null && (
-                <Text style={[styles.price, { color: theme.colors.accent }]}>
-                  € {meta.priceEur.toFixed(2)}
-                </Text>
-              )}
-            </Pressable>
-          );
-        }}
-      />
+        <FlatList
+          data={AVAILABLE}
+          keyExtractor={(type) => type}
+          contentContainerStyle={{ paddingVertical: 14, gap: 10 }}
+          renderItem={({ item }) => {
+            const meta = DEVICE_METADATA[item];
+            const active = productType === item;
+            return (
+              <Pressable onPress={() => setProductType(item)}>
+                <GlassCard
+                  intensity={active ? 'high' : 'low'}
+                  glow={active}
+                  style={{ padding: 14 }}
+                >
+                  <View style={styles.row}>
+                    <View style={[styles.iconPill, active && styles.iconPillActive]}>
+                      <Text style={styles.iconText}>{item[0]?.toUpperCase() ?? '?'}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cardTitle}>{meta.label}</Text>
+                      <Text style={styles.cardBody}>{meta.tagline}</Text>
+                    </View>
+                    {meta.priceEur !== null && (
+                      <Text style={styles.price}>€ {meta.priceEur.toFixed(2)}</Text>
+                    )}
+                  </View>
+                </GlassCard>
+              </Pressable>
+            );
+          }}
+        />
 
-      <Button
-        label="Weiter"
-        onPress={() => {
-          if (!productType) return;
-          advance('bluetooth');
-          navigation.navigate('SetupBluetooth');
-        }}
-        disabled={!productType}
-      />
+        <Button
+          label="Weiter"
+          onPress={() => {
+            if (!productType) return;
+            advance('bluetooth');
+            navigation.navigate('SetupBluetooth');
+          }}
+          disabled={!productType}
+          style={{ marginBottom: insets.bottom + 16 }}
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, gap: 16 },
-  intro: { fontSize: 15, lineHeight: 22 },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    padding: 14,
-    borderRadius: 16,
-    marginVertical: 6,
+  container: { flex: 1, backgroundColor: '#05090F' },
+  inner: { flex: 1, paddingHorizontal: 20 },
+  eyebrow: {
+    color: 'rgba(232,238,243,0.5)',
+    fontSize: 10,
+    letterSpacing: 2.5,
+    fontWeight: '600',
   },
+  title: { color: '#FFFFFF', fontSize: 28, fontWeight: '700', marginTop: 6, letterSpacing: -0.6 },
+  intro: { color: 'rgba(232,238,243,0.65)', fontSize: 14, marginTop: 8, lineHeight: 20 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   iconPill: {
     width: 44,
     height: 44,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(46,117,182,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
+  iconPillActive: { backgroundColor: 'rgba(26,138,125,0.35)' },
   iconText: { color: '#FFFFFF', fontWeight: '700', fontSize: 18 },
-  cardTitle: { fontSize: 16, fontWeight: '600' },
-  cardBody: { fontSize: 13, marginTop: 2 },
-  price: { fontSize: 15, fontWeight: '700' },
+  cardTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  cardBody: { color: 'rgba(232,238,243,0.6)', fontSize: 12, marginTop: 2 },
+  price: { color: '#1A8A7D', fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
 });

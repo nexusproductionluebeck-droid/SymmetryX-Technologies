@@ -9,6 +9,10 @@ build/
 out/
 *.tsbuildinfo
 
+# Allow signed preview builds shipped for stakeholder demos
+!apps/mobile/deliverables/
+!apps/mobile/deliverables/**
+
 # Environment
 .env
 .env.local

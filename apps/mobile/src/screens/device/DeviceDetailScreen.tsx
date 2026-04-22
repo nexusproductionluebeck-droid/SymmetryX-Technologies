@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DEVICE_METADATA } from '@magnax/shared';
 
+import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { Button } from '@/components/Button';
 import { ColorTempSlider } from '@/components/ColorTempSlider';
-import { Dimmer } from '@/components/Dimmer';
+import { GlassCard } from '@/components/GlassCard';
+import { LightHalo } from '@/components/LightHalo';
+import { RadialDimmer } from '@/components/RadialDimmer';
 import { getMqttService } from '@/services/mqtt';
 import { useDeviceStore } from '@/store/deviceStore';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -13,6 +17,7 @@ import type { RootScreenProps } from '@/navigation/types';
 export function DeviceDetailScreen({ route, navigation }: RootScreenProps<'DeviceDetail'>) {
   const { deviceId } = route.params;
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const device = useDeviceStore((s) => s.devices[deviceId]);
   const setBrightness = useDeviceStore((s) => s.setBrightness);
   const setColorTemp = useDeviceStore((s) => s.setColorTemp);
@@ -36,131 +41,219 @@ export function DeviceDetailScreen({ route, navigation }: RootScreenProps<'Devic
 
   if (!device) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Text style={{ color: theme.colors.textPrimary }}>Gerät nicht gefunden.</Text>
-        <Button label="Zurück" onPress={() => navigation.goBack()} style={{ marginTop: 16 }} />
+      <View style={styles.container}>
+        <AnimatedBackground />
+        <Text style={{ color: '#FFFFFF', padding: 20 }}>Gerät nicht gefunden.</Text>
+        <Button label="Zurück" onPress={() => navigation.goBack()} style={{ margin: 20 }} />
       </View>
     );
   }
 
   const meta = DEVICE_METADATA[device.type];
+
   const pushCommand = (patch: { brightness?: number; colorTempK?: number; on?: boolean }) => {
     getMqttService().publishCommand(device.id, patch);
   };
 
-  return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={{ paddingBottom: 40 }}
-    >
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.colors.textPrimary }]}>{device.name}</Text>
-        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-          {meta.label}  ·  {device.roomId ?? 'Kein Raum'}
-        </Text>
-      </View>
+  const displayBrightness = local.on ? local.brightness : 0;
 
-      <View style={[styles.heroCard, { backgroundColor: theme.colors.surface }]}>
-        <View style={styles.heroRow}>
-          <Text style={[styles.heroLabel, { color: theme.colors.textSecondary }]}>Licht</Text>
-          <Switch
-            value={local.on}
-            onValueChange={(v) => {
-              setLocal((prev) => ({ ...prev, on: v, brightness: v ? Math.max(prev.brightness, 60) : prev.brightness }));
-              setOn(device.id, v);
-              pushCommand({ on: v, ...(v && local.brightness === 0 ? { brightness: 60 } : {}) });
+  return (
+    <View style={styles.container}>
+      <AnimatedBackground intensity={local.on ? 'active' : 'calm'} />
+
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.topBar, { paddingTop: insets.top + 6 }]}>
+          <Pressable onPress={() => navigation.goBack()} hitSlop={16} style={styles.backBtn}>
+            <Text style={styles.backGlyph}>‹</Text>
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.eyebrow}>{meta.label.toUpperCase()}</Text>
+            <Text style={styles.title}>{device.name}</Text>
+            <Text style={styles.subtitle}>
+              {device.roomId ?? 'Kein Raum'}  ·  {device.macAddress}
+            </Text>
+          </View>
+          <StatusDot status={device.status} />
+        </View>
+
+        <View style={styles.heroStage}>
+          <LightHalo size={380} brightness={displayBrightness} colorTempK={local.colorTempK} />
+          <RadialDimmer
+            value={local.brightness}
+            disabled={!local.on}
+            onChange={(v) => {
+              setLocal((prev) => ({ ...prev, brightness: v }));
+              setBrightness(device.id, v);
             }}
-            thumbColor={theme.palette.white}
-            trackColor={{ true: theme.palette.teal, false: theme.colors.border }}
+            onCommit={(v) => pushCommand({ brightness: v, on: v > 0 })}
           />
         </View>
 
-        <View style={{ height: 24 }} />
+        <View style={styles.rowActions}>
+          <GlassCard intensity="low" style={styles.actionCard} glow={local.on}>
+            <View style={styles.switchRow}>
+              <View>
+                <Text style={styles.actionEyebrow}>Licht</Text>
+                <Text style={styles.actionLabel}>{local.on ? 'An' : 'Aus'}</Text>
+              </View>
+              <Switch
+                value={local.on}
+                onValueChange={(v) => {
+                  const next = { on: v, brightness: v && local.brightness === 0 ? 60 : local.brightness };
+                  setLocal((prev) => ({ ...prev, ...next }));
+                  setOn(device.id, v);
+                  pushCommand(v ? { on: true, brightness: next.brightness } : { on: false });
+                }}
+                thumbColor="#FFFFFF"
+                trackColor={{ true: theme.palette.teal, false: 'rgba(232,238,243,0.2)' }}
+              />
+            </View>
+          </GlassCard>
 
-        <Dimmer
-          value={local.brightness}
-          label="Helligkeit"
-          disabled={!local.on}
-          onChange={(v) => {
-            setLocal((prev) => ({ ...prev, brightness: v }));
-            setBrightness(device.id, v);
-          }}
-          onCommit={(v) => pushCommand({ brightness: v, on: v > 0 })}
-        />
-
-        <View style={{ height: 24 }} />
+          <GlassCard intensity="low" style={styles.actionCard}>
+            <Text style={styles.actionEyebrow}>Szene</Text>
+            <Text style={styles.actionLabel}>Wohlfühl</Text>
+          </GlassCard>
+        </View>
 
         {device.capabilities.colorTemperature && (
-          <ColorTempSlider
-            valueK={local.colorTempK}
-            onChange={(v) => {
-              setLocal((prev) => ({ ...prev, colorTempK: v }));
-              setColorTemp(device.id, v);
-            }}
-            onCommit={(v) => pushCommand({ colorTempK: v })}
-          />
+          <GlassCard style={styles.section}>
+            <Text style={styles.sectionTitle}>Farbtemperatur</Text>
+            <Text style={styles.sectionHint}>
+              {tempLabel(local.colorTempK)}  ·  {local.colorTempK} K
+            </Text>
+            <View style={{ height: 18 }} />
+            <View style={{ alignItems: 'center' }}>
+              <ColorTempSlider
+                valueK={local.colorTempK}
+                onChange={(v) => {
+                  setLocal((prev) => ({ ...prev, colorTempK: v }));
+                  setColorTemp(device.id, v);
+                }}
+                onCommit={(v) => pushCommand({ colorTempK: v })}
+              />
+            </View>
+          </GlassCard>
         )}
-      </View>
 
-      <View style={[styles.metaCard, { backgroundColor: theme.colors.surface }]}>
-        <MetaRow label="MAC-Adresse" value={device.macAddress} />
-        <MetaRow label="Firmware" value={device.firmware.current} />
-        <MetaRow label="Status" value={device.status} />
-        {device.mesh ? (
-          <>
-            <MetaRow label="Mesh-Rolle" value={device.mesh.role} />
-            <MetaRow label="Signal" value={`${device.mesh.rssiDbm} dBm`} />
-          </>
-        ) : null}
-      </View>
-    </ScrollView>
-  );
-}
-
-function MetaRow({ label, value }: { label: string; value: string }) {
-  const theme = useTheme();
-  return (
-    <View style={[metaStyles.row, { borderBottomColor: theme.colors.border }]}>
-      <Text style={[metaStyles.label, { color: theme.colors.textSecondary }]}>{label}</Text>
-      <Text style={[metaStyles.value, { color: theme.colors.textPrimary }]}>{value}</Text>
+        <GlassCard style={styles.section}>
+          <Text style={styles.sectionTitle}>Gerät</Text>
+          <MetaRow label="MAC" value={device.macAddress} />
+          <MetaRow label="Firmware" value={device.firmware.current} />
+          <MetaRow label="Status" value={device.status} />
+          {device.mesh ? (
+            <>
+              <MetaRow label="Mesh-Rolle" value={device.mesh.role} />
+              <MetaRow label="Signal" value={`${device.mesh.rssiDbm} dBm`} />
+            </>
+          ) : null}
+        </GlassCard>
+      </ScrollView>
     </View>
   );
 }
 
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={metaStyles.row}>
+      <Text style={metaStyles.label}>{label}</Text>
+      <Text style={metaStyles.value}>{value}</Text>
+    </View>
+  );
+}
+
+function StatusDot({ status }: { status: string }) {
+  const color =
+    status === 'online' ? '#4CD294' : status === 'warning' ? '#FFB547' : status === 'offline' ? '#EF5350' : '#1A8A7D';
+  return (
+    <View style={[statusStyles.dotOuter, { borderColor: color }]}>
+      <View style={[statusStyles.dotInner, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
+function tempLabel(k: number): string {
+  if (k < 2800) return 'Warmes Kerzenlicht';
+  if (k < 3400) return 'Warmweiß';
+  if (k < 4200) return 'Neutralweiß';
+  if (k < 5200) return 'Tageslicht';
+  return 'Kühles Tageslicht';
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { padding: 20 },
-  title: { fontSize: 26, fontWeight: '700' },
-  subtitle: { fontSize: 14, marginTop: 4 },
-  heroCard: {
-    marginHorizontal: 20,
-    padding: 20,
+  container: { flex: 1, backgroundColor: '#05090F' },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
-  heroRow: {
-    width: '100%',
-    flexDirection: 'row',
+  backGlyph: { color: '#FFFFFF', fontSize: 28, marginTop: -4 },
+  eyebrow: {
+    color: 'rgba(232,238,243,0.5)',
+    fontSize: 10,
+    letterSpacing: 2.5,
+    fontWeight: '600',
+  },
+  title: { color: '#FFFFFF', fontSize: 24, fontWeight: '700', marginTop: 2, letterSpacing: -0.4 },
+  subtitle: { color: 'rgba(232,238,243,0.55)', fontSize: 12, marginTop: 2, fontVariant: ['tabular-nums'] },
+  heroStage: {
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    marginTop: 14,
+    marginBottom: 20,
+    height: 340,
   },
-  heroLabel: { fontSize: 14, letterSpacing: 1, textTransform: 'uppercase' },
-  metaCard: {
-    marginHorizontal: 20,
-    marginTop: 20,
-    padding: 4,
-    borderRadius: 16,
+  rowActions: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 16 },
+  actionCard: { flex: 1, padding: 14 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  actionEyebrow: {
+    color: 'rgba(232,238,243,0.5)',
+    fontSize: 10,
+    letterSpacing: 2,
+    fontWeight: '600',
   },
+  actionLabel: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', marginTop: 4 },
+  section: { marginHorizontal: 20, marginBottom: 16 },
+  sectionTitle: { color: '#FFFFFF', fontSize: 15, fontWeight: '600', letterSpacing: 0.3 },
+  sectionHint: { color: 'rgba(232,238,243,0.55)', fontSize: 12, marginTop: 4 },
 });
 
 const metaStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
   },
-  label: { fontSize: 13 },
-  value: { fontSize: 14, fontWeight: '500', fontVariant: ['tabular-nums'] },
+  label: { color: 'rgba(232,238,243,0.55)', fontSize: 13 },
+  value: { color: '#FFFFFF', fontSize: 13, fontVariant: ['tabular-nums'] },
+});
+
+const statusStyles = StyleSheet.create({
+  dotOuter: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  dotInner: { width: 6, height: 6, borderRadius: 3 },
 });

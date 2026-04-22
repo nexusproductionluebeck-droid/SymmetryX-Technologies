@@ -32,9 +32,14 @@ export function ColorTempSlider({
   const emit = useCallback((next: number) => onChange(next), [onChange]);
   const commit = useCallback((next: number) => onCommit?.(next), [onCommit]);
 
+  const startValue = useSharedValue(0);
+
   const pan = Gesture.Pan()
+    .onBegin(() => {
+      startValue.value = translate.value;
+    })
     .onUpdate((event) => {
-      const clamped = Math.max(0, Math.min(TRACK_WIDTH, translate.value + event.changeX));
+      const clamped = Math.max(0, Math.min(TRACK_WIDTH, startValue.value + event.translationX));
       translate.value = clamped;
       const next = Math.round(minK + (clamped / TRACK_WIDTH) * range);
       runOnJS(emit)(next);
