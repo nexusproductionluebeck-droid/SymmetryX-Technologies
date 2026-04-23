@@ -1,4 +1,7 @@
-export type DeviceType =
+/**
+ * MAGNA-X ceiling hardware.
+ */
+export type MagnaxDeviceType =
   | 'pure'
   | 'mesh'
   | 'sense'
@@ -9,6 +12,28 @@ export type DeviceType =
   | 'plug'
   | 'pole'
   | 'switch';
+
+/**
+ * Third-party accessories the MAGNA-X app steers through the platform —
+ * blinds, windows, fans, heaters, etc. They may speak Matter/Zigbee/
+ * Thread under the hood, but in the app they sit alongside MAGNA-X
+ * nodes as first-class room citizens.
+ */
+export type AccessoryType = 'blind' | 'window' | 'fan' | 'heater' | 'outlet';
+
+export type DeviceType = MagnaxDeviceType | AccessoryType;
+
+export const ACCESSORY_TYPES: ReadonlyArray<AccessoryType> = [
+  'blind',
+  'window',
+  'fan',
+  'heater',
+  'outlet',
+];
+
+export function isAccessory(type: DeviceType): type is AccessoryType {
+  return (ACCESSORY_TYPES as ReadonlyArray<string>).includes(type);
+}
 
 export type DeviceStatus = 'online' | 'offline' | 'warning' | 'commissioning';
 
@@ -60,12 +85,57 @@ export interface Device {
   lastSeen: string;
 }
 
+export type WindowMode = 'closed' | 'tilt' | 'open';
+
+export interface AccessoryState {
+  /** Blind position 0 (fully open) – 100 (fully closed). */
+  blindPosition: number | null;
+  /** Window mode — closed, tilted, or fully open. */
+  windowMode: WindowMode | null;
+  /** Fan speed 0 – 100. */
+  fanSpeed: number | null;
+  /** Heater target temperature in °C. */
+  heaterTargetC: number | null;
+  /** Outlet power on/off. */
+  outletOn: boolean | null;
+}
+
 export interface DeviceState {
   on: boolean;
   brightness: number;
   colorTempK: number;
   rgb: { r: number; g: number; b: number } | null;
   sensors: SensorReading | null;
+  accessory: AccessoryState;
+}
+
+const EMPTY_ACCESSORY_STATE: AccessoryState = {
+  blindPosition: null,
+  windowMode: null,
+  fanSpeed: null,
+  heaterTargetC: null,
+  outletOn: null,
+};
+
+export function makeAccessoryState(type: AccessoryType): AccessoryState {
+  switch (type) {
+    case 'blind':
+      return { ...EMPTY_ACCESSORY_STATE, blindPosition: 30 };
+    case 'window':
+      return { ...EMPTY_ACCESSORY_STATE, windowMode: 'closed' };
+    case 'fan':
+      return { ...EMPTY_ACCESSORY_STATE, fanSpeed: 0 };
+    case 'heater':
+      return { ...EMPTY_ACCESSORY_STATE, heaterTargetC: 21 };
+    case 'outlet':
+      return { ...EMPTY_ACCESSORY_STATE, outletOn: false };
+    default:
+      return EMPTY_ACCESSORY_STATE;
+  }
+}
+
+export function emptyAccessoryState(): AccessoryState {
+  return EMPTY_ACCESSORY_STATE;
 }
 
 export const CAPABILITY_MATRIX: Record<DeviceType, DeviceCapabilities> = {
@@ -159,6 +229,51 @@ export const CAPABILITY_MATRIX: Record<DeviceType, DeviceCapabilities> = {
     camera: false,
     smokeDetector: false,
   },
+  blind: {
+    dimming: false,
+    colorTemperature: false,
+    rgb: false,
+    mesh: false,
+    sensors: false,
+    camera: false,
+    smokeDetector: false,
+  },
+  window: {
+    dimming: false,
+    colorTemperature: false,
+    rgb: false,
+    mesh: false,
+    sensors: false,
+    camera: false,
+    smokeDetector: false,
+  },
+  fan: {
+    dimming: false,
+    colorTemperature: false,
+    rgb: false,
+    mesh: false,
+    sensors: false,
+    camera: false,
+    smokeDetector: false,
+  },
+  heater: {
+    dimming: false,
+    colorTemperature: false,
+    rgb: false,
+    mesh: false,
+    sensors: false,
+    camera: false,
+    smokeDetector: false,
+  },
+  outlet: {
+    dimming: false,
+    colorTemperature: false,
+    rgb: false,
+    mesh: false,
+    sensors: false,
+    camera: false,
+    smokeDetector: false,
+  },
 };
 
 export const DEVICE_METADATA: Record<
@@ -183,4 +298,9 @@ export const DEVICE_METADATA: Record<
   plug: { label: 'MagnaX Plug', priceEur: null, tagline: 'Steckdose am Deckenpunkt.' },
   pole: { label: 'MagnaX Pole', priceEur: null, tagline: 'Lampenwechsel ohne Leiter.' },
   switch: { label: 'MagnaX Switch', priceEur: null, tagline: 'Intelligenter Schalter.' },
+  blind: { label: 'Jalousie', priceEur: null, tagline: 'Beschattung stufenlos geregelt.' },
+  window: { label: 'Fenster', priceEur: null, tagline: 'Zu · Gekippt · Offen per App.' },
+  fan: { label: 'Lüfter', priceEur: null, tagline: 'Luftstrom über Drehzahl gesteuert.' },
+  heater: { label: 'Heizung', priceEur: null, tagline: 'Zielwerte pro Raum.' },
+  outlet: { label: 'Steckdose', priceEur: null, tagline: 'Zwischenschalter, remote.' },
 };

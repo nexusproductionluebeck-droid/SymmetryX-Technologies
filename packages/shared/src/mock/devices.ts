@@ -1,4 +1,11 @@
-import { CAPABILITY_MATRIX, type Device, type DeviceType } from '../types/device';
+import {
+  CAPABILITY_MATRIX,
+  emptyAccessoryState,
+  isAccessory,
+  makeAccessoryState,
+  type Device,
+  type DeviceType,
+} from '../types/device';
 
 /**
  * Deterministic device factory used during discovery/onboarding
@@ -37,6 +44,7 @@ export function makeMockDevice(
             recordedAt: new Date().toISOString(),
           }
         : null,
+      accessory: isAccessory(type) ? makeAccessoryState(type) : emptyAccessoryState(),
     },
     firmware: {
       current: '1.0.0',

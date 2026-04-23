@@ -5,6 +5,7 @@ import { DEVICE_METADATA } from '@magnax/shared';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { Button } from '@/components/Button';
 import { GlassCard } from '@/components/GlassCard';
+import { seedDemoLivingRoom } from '@/services/demoSeed';
 import { useDeviceStore } from '@/store/deviceStore';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { RootScreenProps } from '@/navigation/types';
@@ -25,6 +26,14 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
     (sum, d) => sum + (d.state.on ? (d.state.brightness / 100) * 9 : 0),
     0,
   );
+
+  // Group devices by room for the rooms section
+  const rooms = devices.reduce<Record<string, typeof devices>>((acc, d) => {
+    const key = d.roomId ?? 'Ohne Raum';
+    (acc[key] ??= []).push(d);
+    return acc;
+  }, {});
+  const roomEntries = Object.entries(rooms).sort(([a], [b]) => a.localeCompare(b));
 
   return (
     <View style={styles.container}>
@@ -94,11 +103,52 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
                 onPress={() => navigation.navigate('SetupProduct')}
                 style={{ marginTop: 20, minWidth: 220 }}
               />
+              <View style={{ height: 10 }} />
+              <Button
+                label="Demo-Wohnzimmer laden"
+                variant="secondary"
+                onPress={() => seedDemoLivingRoom()}
+                style={{ minWidth: 220 }}
+              />
             </GlassCard>
           </View>
         ) : (
           <>
-            <Text style={styles.sectionHeader}>Räume · Geräte</Text>
+            {roomEntries.length > 0 && (
+              <>
+                <Text style={styles.sectionHeader}>Räume</Text>
+                <View style={styles.roomsRow}>
+                  {roomEntries.map(([name, list]) => {
+                    const anyOn = list.some((d) => d.state.on);
+                    return (
+                      <Pressable
+                        key={name}
+                        style={styles.roomCardWrap}
+                        onPress={() => navigation.navigate('RoomDetail', { roomName: name })}
+                      >
+                        <GlassCard intensity={anyOn ? 'high' : 'low'} glow={anyOn} style={styles.roomCard}>
+                          <Text style={styles.roomName}>{name}</Text>
+                          <Text style={styles.roomMeta}>{list.length} Geräte</Text>
+                          <View style={styles.roomPills}>
+                            {list.slice(0, 4).map((d) => (
+                              <View key={d.id} style={styles.roomPill}>
+                                <Text style={styles.roomPillText}>
+                                  {DEVICE_METADATA[d.type].label.split(' ')[1]?.[0] ??
+                                    DEVICE_METADATA[d.type].label[0] ??
+                                    '?'}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        </GlassCard>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
+            <Text style={styles.sectionHeader}>Alle Geräte</Text>
             <View style={styles.grid}>
               {devices.map((item) => {
                 const meta = DEVICE_METADATA[item.type];
@@ -142,11 +192,16 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
               })}
             </View>
 
-            <View style={{ paddingHorizontal: 20, marginTop: 12 }}>
+            <View style={{ paddingHorizontal: 20, marginTop: 12, gap: 10 }}>
               <Button
                 label="Weiteres Gerät hinzufügen"
                 variant="secondary"
                 onPress={() => navigation.navigate('SetupProduct')}
+              />
+              <Button
+                label="Demo-Wohnzimmer laden"
+                variant="ghost"
+                onPress={() => seedDemoLivingRoom()}
               />
             </View>
           </>
@@ -235,6 +290,27 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
   },
+  roomsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+  },
+  roomCardWrap: { flex: 1, padding: 4 },
+  roomCard: { padding: 16, minHeight: 110 },
+  roomName: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
+  roomMeta: { color: 'rgba(232,238,243,0.6)', fontSize: 12, marginTop: 2 },
+  roomPills: { flexDirection: 'row', marginTop: 12 },
+  roomPill: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    backgroundColor: 'rgba(46,117,182,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  roomPillText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

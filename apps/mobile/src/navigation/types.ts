@@ -12,6 +12,7 @@ export type RootStackParamList = {
   Home: undefined;
   DeviceDetail: { deviceId: string };
   Mesh: undefined;
+  RoomDetail: { roomName: string };
 };
 
 export type RootScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<

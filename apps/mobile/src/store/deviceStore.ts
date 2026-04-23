@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Device, DeviceType, SensorReading } from '@magnax/shared';
+import type { AccessoryState, Device, DeviceType, SensorReading, WindowMode } from '@magnax/shared';
 
 interface DeviceStoreState {
   devices: Record<string, Device>;
@@ -11,7 +11,12 @@ interface DeviceStoreState {
   setOn: (id: string, on: boolean) => void;
   setRoom: (id: string, roomId: string) => void;
   setSensors: (id: string, sensors: SensorReading) => void;
+  setAccessory: (id: string, patch: Partial<AccessoryState>) => void;
+  setBlindPosition: (id: string, position: number) => void;
+  setWindowMode: (id: string, mode: WindowMode) => void;
+  setFanSpeed: (id: string, speed: number) => void;
   listByType: (type: DeviceType) => Device[];
+  listByRoom: (roomId: string) => Device[];
 }
 
 export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
@@ -86,5 +91,28 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
         },
       };
     }),
+  setAccessory: (id, patch) =>
+    set((state) => {
+      const device = state.devices[id];
+      if (!device) return state;
+      return {
+        devices: {
+          ...state.devices,
+          [id]: {
+            ...device,
+            state: { ...device.state, accessory: { ...device.state.accessory, ...patch } },
+          },
+        },
+      };
+    }),
+  setBlindPosition: (id, position) =>
+    get().setAccessory(id, { blindPosition: Math.max(0, Math.min(100, position)) }),
+  setWindowMode: (id, mode) => get().setAccessory(id, { windowMode: mode }),
+  setFanSpeed: (id, speed) =>
+    get().setAccessory(id, { fanSpeed: Math.max(0, Math.min(100, speed)) }),
   listByType: (type) => Object.values(get().devices).filter((d) => d.type === type),
+  listByRoom: (roomId) =>
+    Object.values(get().devices).filter(
+      (d) => (d.roomId ?? '').toLowerCase() === roomId.toLowerCase(),
+    ),
 }));
