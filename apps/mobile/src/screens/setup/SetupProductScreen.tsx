@@ -21,7 +21,8 @@ export function SetupProductScreen({ navigation }: RootScreenProps<'SetupProduct
         <Text style={styles.eyebrow}>SCHRITT 1 VON 5</Text>
         <Text style={styles.title}>Welches MagnaX?</Text>
         <Text style={styles.intro}>
-          Die nächsten Schritte passen sich automatisch an das gewählte Produkt an.
+          Wähle die Variante aus, die in deiner Decke steckt. Die nächsten Schritte passen
+          sich automatisch an.
         </Text>
 
         <FlatList
@@ -46,9 +47,7 @@ export function SetupProductScreen({ navigation }: RootScreenProps<'SetupProduct
                       <Text style={styles.cardTitle}>{meta.label}</Text>
                       <Text style={styles.cardBody}>{meta.tagline}</Text>
                     </View>
-                    {meta.priceEur !== null && (
-                      <Text style={styles.price}>€ {meta.priceEur.toFixed(2)}</Text>
-                    )}
+                    {active && <View style={styles.checkDot} />}
                   </View>
                 </GlassCard>
               </Pressable>
@@ -97,5 +96,14 @@ const styles = StyleSheet.create({
   iconText: { color: '#FFFFFF', fontWeight: '700', fontSize: 18 },
   cardTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
   cardBody: { color: 'rgba(232,238,243,0.6)', fontSize: 12, marginTop: 2 },
-  price: { color: '#1A8A7D', fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  checkDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#1A8A7D',
+    shadowColor: '#1A8A7D',
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+  },
 });

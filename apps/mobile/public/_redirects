@@ -1,0 +1,7 @@
+# Single-Page-App fallback for Netlify / Vercel / Cloudflare Pages.
+#
+# React Navigation (native-stack on web) handles routing client-side,
+# but the host needs to serve index.html for any deep link — otherwise
+# link-preview scrapers (WhatsApp, Messenger, iMessage) or shared URLs
+# with path suffixes 404 instead of loading the app.
+/*  /index.html  200

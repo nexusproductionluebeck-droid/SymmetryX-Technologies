@@ -23,7 +23,10 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
 
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View>
-          <Text style={styles.eyebrow}>DEIN ZUHAUSE</Text>
+          <View style={styles.brandRow}>
+            <View style={styles.brandDot} />
+            <Text style={styles.brandText}>MAGNA-X · SymmetryX</Text>
+          </View>
           <Text style={styles.greeting}>Guten Abend</Text>
         </View>
         <Pressable style={styles.profilePill} onPress={() => {}}>
@@ -140,7 +143,28 @@ const styles = StyleSheet.create({
     letterSpacing: 2.5,
     fontWeight: '600',
   },
-  greeting: { color: '#FFFFFF', fontSize: 32, fontWeight: '700', marginTop: 4, letterSpacing: -0.6 },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  brandDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#1A8A7D',
+    shadowColor: '#1A8A7D',
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  brandText: {
+    color: 'rgba(232,238,243,0.65)',
+    fontSize: 10,
+    letterSpacing: 2.5,
+    fontWeight: '600',
+  },
+  greeting: { color: '#FFFFFF', fontSize: 32, fontWeight: '700', marginTop: 10, letterSpacing: -0.6 },
   profilePill: {
     width: 42,
     height: 42,

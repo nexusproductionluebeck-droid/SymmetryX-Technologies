@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DEVICE_METADATA } from '@magnax/shared';
+import { DEVICE_METADATA, toCapsWithBrand } from '@magnax/shared';
 
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { Button } from '@/components/Button';
@@ -70,7 +70,7 @@ export function DeviceDetailScreen({ route, navigation }: RootScreenProps<'Devic
             <Text style={styles.backGlyph}>‹</Text>
           </Pressable>
           <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>{meta.label.toUpperCase()}</Text>
+            <Text style={styles.eyebrow}>{toCapsWithBrand(meta.label)}</Text>
             <Text style={styles.title}>{device.name}</Text>
             <Text style={styles.subtitle}>
               {device.roomId ?? 'Kein Raum'}  ·  {device.macAddress}
@@ -151,6 +151,10 @@ export function DeviceDetailScreen({ route, navigation }: RootScreenProps<'Devic
             </>
           ) : null}
         </GlassCard>
+
+        <Text style={styles.signature}>
+          MAGNA-X · engineered by SymmetryX Technologies
+        </Text>
       </ScrollView>
     </View>
   );
@@ -231,6 +235,14 @@ const styles = StyleSheet.create({
   section: { marginHorizontal: 20, marginBottom: 16 },
   sectionTitle: { color: '#FFFFFF', fontSize: 15, fontWeight: '600', letterSpacing: 0.3 },
   sectionHint: { color: 'rgba(232,238,243,0.55)', fontSize: 12, marginTop: 4 },
+  signature: {
+    textAlign: 'center',
+    color: 'rgba(232,238,243,0.35)',
+    fontSize: 10,
+    letterSpacing: 2.5,
+    fontWeight: '500',
+    marginTop: 20,
+  },
 });
 
 const metaStyles = StyleSheet.create({

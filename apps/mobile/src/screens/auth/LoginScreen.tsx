@@ -29,7 +29,7 @@ export function LoginScreen({ navigation }: RootScreenProps<'Login'>) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={[styles.inner, { paddingTop: insets.top + 60 }]}
       >
-        <Text style={styles.eyebrow}>MAGNAX</Text>
+        <Text style={styles.eyebrow}>MAGNA-X</Text>
         <Text style={styles.heading}>Willkommen zurück</Text>
         <Text style={styles.subheading}>
           Melde dich an, um dein Zuhause zu verwalten.
