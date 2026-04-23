@@ -8,6 +8,7 @@ import { ThemeProvider } from '@/theme/ThemeProvider';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { SplashScreen } from '@/screens/SplashScreen';
 import { bootstrapServices } from '@/services/bootstrap';
+import { startSensorSimulator } from '@/services/sensorSimulator';
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
@@ -26,6 +27,12 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isReady) return;
+    const sim = startSensorSimulator();
+    return () => sim.stop();
+  }, [isReady]);
 
   return (
     <SafeAreaProvider>

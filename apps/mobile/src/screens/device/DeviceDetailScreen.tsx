@@ -9,6 +9,7 @@ import { ColorTempSlider } from '@/components/ColorTempSlider';
 import { GlassCard } from '@/components/GlassCard';
 import { LightHalo } from '@/components/LightHalo';
 import { RadialDimmer } from '@/components/RadialDimmer';
+import { SensorPanel } from '@/components/sensors/SensorPanel';
 import { getMqttService } from '@/services/mqtt';
 import { useDeviceStore } from '@/store/deviceStore';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -91,6 +92,12 @@ export function DeviceDetailScreen({ route, navigation }: RootScreenProps<'Devic
             onCommit={(v) => pushCommand({ brightness: v, on: v > 0 })}
           />
         </View>
+
+        {device.capabilities.sensors && (
+          <View style={{ marginBottom: 16 }}>
+            <SensorPanel reading={device.state.sensors} />
+          </View>
+        )}
 
         <View style={styles.rowActions}>
           <GlassCard intensity="low" style={styles.actionCard} glow={local.on}>

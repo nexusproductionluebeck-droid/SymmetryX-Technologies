@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Device, DeviceType } from '@magnax/shared';
+import type { Device, DeviceType, SensorReading } from '@magnax/shared';
 
 interface DeviceStoreState {
   devices: Record<string, Device>;
@@ -10,6 +10,7 @@ interface DeviceStoreState {
   setColorTemp: (id: string, colorTempK: number) => void;
   setOn: (id: string, on: boolean) => void;
   setRoom: (id: string, roomId: string) => void;
+  setSensors: (id: string, sensors: SensorReading) => void;
   listByType: (type: DeviceType) => Device[];
 }
 
@@ -72,6 +73,17 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
       if (!device) return state;
       return {
         devices: { ...state.devices, [id]: { ...device, roomId, status: 'online' } },
+      };
+    }),
+  setSensors: (id, sensors) =>
+    set((state) => {
+      const device = state.devices[id];
+      if (!device || !device.capabilities.sensors) return state;
+      return {
+        devices: {
+          ...state.devices,
+          [id]: { ...device, state: { ...device.state, sensors } },
+        },
       };
     }),
   listByType: (type) => Object.values(get().devices).filter((d) => d.type === type),
