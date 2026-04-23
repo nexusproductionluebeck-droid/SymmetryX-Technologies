@@ -46,7 +46,10 @@ export function SetupCompleteScreen({ navigation }: RootScreenProps<'SetupComple
 
   const handleDone = () => {
     reset();
-    navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+    // Use getParent() so we reset the outer stack reliably on both native and web.
+    // `navigation.replace` in native-stack v7 is the web-safe way to swap the current
+    // screen for Home without relying on the less-reliable .reset() path.
+    navigation.replace('Home');
   };
 
   return (

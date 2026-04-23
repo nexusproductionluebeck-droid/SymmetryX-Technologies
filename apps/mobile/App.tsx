@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { SplashScreen } from '@/screens/SplashScreen';
@@ -42,16 +43,18 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <View style={styles.root}>
-          {isReady ? (
-            <NavigationContainer>
-              <RootNavigator />
-            </NavigationContainer>
-          ) : (
-            <SplashScreen />
-          )}
-          <StatusBar style="light" />
-        </View>
+        <ErrorBoundary>
+          <View style={styles.root}>
+            {isReady ? (
+              <NavigationContainer>
+                <RootNavigator />
+              </NavigationContainer>
+            ) : (
+              <SplashScreen />
+            )}
+            <StatusBar style="light" />
+          </View>
+        </ErrorBoundary>
       </ThemeProvider>
     </SafeAreaProvider>
   );

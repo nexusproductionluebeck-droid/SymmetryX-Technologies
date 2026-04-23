@@ -19,7 +19,7 @@ export function LoginScreen({ navigation }: RootScreenProps<'Login'>) {
     setBusy(true);
     await new Promise((resolve) => setTimeout(resolve, 400));
     setBusy(false);
-    navigation.reset({ index: 0, routes: [{ name: 'SetupProduct' }] });
+    navigation.replace('SetupProduct');
   };
 
   return (
