@@ -5,11 +5,13 @@ import { DEVICE_METADATA, toCapsWithBrand } from '@magnax/shared';
 
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { Button } from '@/components/Button';
+import { CameraLiveTile } from '@/components/accessories/CameraLiveTile';
 import { ColorTempSlider } from '@/components/ColorTempSlider';
 import { GlassCard } from '@/components/GlassCard';
 import { LightHalo } from '@/components/LightHalo';
 import { RadialDimmer } from '@/components/RadialDimmer';
 import { SensorPanel } from '@/components/sensors/SensorPanel';
+import { MotionSensorTile } from '@/components/accessories/MotionSensorTile';
 import { getMqttService } from '@/services/mqtt';
 import { useDeviceStore } from '@/store/deviceStore';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -80,18 +82,46 @@ export function DeviceDetailScreen({ route, navigation }: RootScreenProps<'Devic
           <StatusDot status={device.status} />
         </View>
 
-        <View style={styles.heroStage}>
-          <LightHalo size={380} brightness={displayBrightness} colorTempK={local.colorTempK} />
-          <RadialDimmer
-            value={local.brightness}
-            disabled={!local.on}
-            onChange={(v) => {
-              setLocal((prev) => ({ ...prev, brightness: v }));
-              setBrightness(device.id, v);
-            }}
-            onCommit={(v) => pushCommand({ brightness: v, on: v > 0 })}
-          />
-        </View>
+        {device.capabilities.camera ? (
+          <View style={{ paddingHorizontal: 20, marginBottom: 16, alignItems: 'center' }}>
+            <CameraLiveTile
+              width={320}
+              height={180}
+              privacyMode={device.state.accessory.camera?.privacyMode ?? false}
+              streaming={device.state.accessory.camera?.streaming ?? true}
+              motionDetected
+            />
+            <View style={{ height: 12 }} />
+            <Button
+              label="Kamera-Vollbild öffnen"
+              onPress={() => navigation.navigate('Camera', { deviceId: device.id })}
+              style={{ minWidth: 260 }}
+            />
+          </View>
+        ) : device.type === 'motion' ? (
+          <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+            <GlassCard glow={device.state.accessory.motionPresent ?? false}>
+              <MotionSensorTile
+                present={device.state.accessory.motionPresent ?? false}
+                history={device.state.accessory.motionHistory ?? []}
+                name={device.name}
+              />
+            </GlassCard>
+          </View>
+        ) : (
+          <View style={styles.heroStage}>
+            <LightHalo size={380} brightness={displayBrightness} colorTempK={local.colorTempK} />
+            <RadialDimmer
+              value={local.brightness}
+              disabled={!local.on}
+              onChange={(v) => {
+                setLocal((prev) => ({ ...prev, brightness: v }));
+                setBrightness(device.id, v);
+              }}
+              onCommit={(v) => pushCommand({ brightness: v, on: v > 0 })}
+            />
+          </View>
+        )}
 
         {device.capabilities.sensors && (
           <View style={{ marginBottom: 16 }}>
@@ -99,32 +129,34 @@ export function DeviceDetailScreen({ route, navigation }: RootScreenProps<'Devic
           </View>
         )}
 
-        <View style={styles.rowActions}>
-          <GlassCard intensity="low" style={styles.actionCard} glow={local.on}>
-            <View style={styles.switchRow}>
-              <View>
-                <Text style={styles.actionEyebrow}>Licht</Text>
-                <Text style={styles.actionLabel}>{local.on ? 'An' : 'Aus'}</Text>
+        {device.capabilities.dimming && (
+          <View style={styles.rowActions}>
+            <GlassCard intensity="low" style={styles.actionCard} glow={local.on}>
+              <View style={styles.switchRow}>
+                <View>
+                  <Text style={styles.actionEyebrow}>Licht</Text>
+                  <Text style={styles.actionLabel}>{local.on ? 'An' : 'Aus'}</Text>
+                </View>
+                <Switch
+                  value={local.on}
+                  onValueChange={(v) => {
+                    const next = { on: v, brightness: v && local.brightness === 0 ? 60 : local.brightness };
+                    setLocal((prev) => ({ ...prev, ...next }));
+                    setOn(device.id, v);
+                    pushCommand(v ? { on: true, brightness: next.brightness } : { on: false });
+                  }}
+                  thumbColor="#FFFFFF"
+                  trackColor={{ true: theme.palette.teal, false: 'rgba(232,238,243,0.2)' }}
+                />
               </View>
-              <Switch
-                value={local.on}
-                onValueChange={(v) => {
-                  const next = { on: v, brightness: v && local.brightness === 0 ? 60 : local.brightness };
-                  setLocal((prev) => ({ ...prev, ...next }));
-                  setOn(device.id, v);
-                  pushCommand(v ? { on: true, brightness: next.brightness } : { on: false });
-                }}
-                thumbColor="#FFFFFF"
-                trackColor={{ true: theme.palette.teal, false: 'rgba(232,238,243,0.2)' }}
-              />
-            </View>
-          </GlassCard>
+            </GlassCard>
 
-          <GlassCard intensity="low" style={styles.actionCard}>
-            <Text style={styles.actionEyebrow}>Szene</Text>
-            <Text style={styles.actionLabel}>Wohlfühl</Text>
-          </GlassCard>
-        </View>
+            <GlassCard intensity="low" style={styles.actionCard}>
+              <Text style={styles.actionEyebrow}>Szene</Text>
+              <Text style={styles.actionLabel}>Wohlfühl</Text>
+            </GlassCard>
+          </View>
+        )}
 
         {device.capabilities.colorTemperature && (
           <GlassCard style={styles.section}>

@@ -12,6 +12,7 @@ import { HomeScreen } from '@/screens/home/HomeScreen';
 import { DeviceDetailScreen } from '@/screens/device/DeviceDetailScreen';
 import { MeshDashboardScreen } from '@/screens/mesh/MeshDashboardScreen';
 import { RoomDetailScreen } from '@/screens/room/RoomDetailScreen';
+import { CameraScreen } from '@/screens/camera/CameraScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -44,6 +45,7 @@ export function RootNavigator() {
       <Stack.Screen name="DeviceDetail" component={DeviceDetailScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Mesh" component={MeshDashboardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RoomDetail" component={RoomDetailScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Camera" component={CameraScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

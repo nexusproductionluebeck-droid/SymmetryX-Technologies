@@ -19,7 +19,7 @@ export type MagnaxDeviceType =
  * Thread under the hood, but in the app they sit alongside MAGNA-X
  * nodes as first-class room citizens.
  */
-export type AccessoryType = 'blind' | 'window' | 'fan' | 'heater' | 'outlet';
+export type AccessoryType = 'blind' | 'window' | 'fan' | 'heater' | 'outlet' | 'motion';
 
 export type DeviceType = MagnaxDeviceType | AccessoryType;
 
@@ -29,6 +29,7 @@ export const ACCESSORY_TYPES: ReadonlyArray<AccessoryType> = [
   'fan',
   'heater',
   'outlet',
+  'motion',
 ];
 
 export function isAccessory(type: DeviceType): type is AccessoryType {
@@ -87,6 +88,19 @@ export interface Device {
 
 export type WindowMode = 'closed' | 'tilt' | 'open';
 
+export interface MotionEvent {
+  id: string;
+  at: string;
+  zone: string;
+}
+
+export interface CameraState {
+  streaming: boolean;
+  privacyMode: boolean;
+  motionZonesActive: boolean;
+  lastSnapshotAt: string | null;
+}
+
 export interface AccessoryState {
   /** Blind position 0 (fully open) – 100 (fully closed). */
   blindPosition: number | null;
@@ -98,6 +112,12 @@ export interface AccessoryState {
   heaterTargetC: number | null;
   /** Outlet power on/off. */
   outletOn: boolean | null;
+  /** Motion sensor current occupancy + recent events. */
+  motionPresent: boolean | null;
+  /** Rolling buffer of recent motion events (newest first). */
+  motionHistory: MotionEvent[] | null;
+  /** Camera stream + privacy state (used by MAGNA-X Cam). */
+  camera: CameraState | null;
 }
 
 export interface DeviceState {
@@ -115,6 +135,9 @@ const EMPTY_ACCESSORY_STATE: AccessoryState = {
   fanSpeed: null,
   heaterTargetC: null,
   outletOn: null,
+  motionPresent: null,
+  motionHistory: null,
+  camera: null,
 };
 
 export function makeAccessoryState(type: AccessoryType): AccessoryState {
@@ -129,9 +152,20 @@ export function makeAccessoryState(type: AccessoryType): AccessoryState {
       return { ...EMPTY_ACCESSORY_STATE, heaterTargetC: 21 };
     case 'outlet':
       return { ...EMPTY_ACCESSORY_STATE, outletOn: false };
+    case 'motion':
+      return { ...EMPTY_ACCESSORY_STATE, motionPresent: false, motionHistory: [] };
     default:
       return EMPTY_ACCESSORY_STATE;
   }
+}
+
+export function makeCameraState(): CameraState {
+  return {
+    streaming: true,
+    privacyMode: false,
+    motionZonesActive: true,
+    lastSnapshotAt: null,
+  };
 }
 
 export function emptyAccessoryState(): AccessoryState {
@@ -274,6 +308,15 @@ export const CAPABILITY_MATRIX: Record<DeviceType, DeviceCapabilities> = {
     camera: false,
     smokeDetector: false,
   },
+  motion: {
+    dimming: false,
+    colorTemperature: false,
+    rgb: false,
+    mesh: false,
+    sensors: false,
+    camera: false,
+    smokeDetector: false,
+  },
 };
 
 export const DEVICE_METADATA: Record<
@@ -303,4 +346,5 @@ export const DEVICE_METADATA: Record<
   fan: { label: 'Lüfter', priceEur: null, tagline: 'Luftstrom über Drehzahl gesteuert.' },
   heater: { label: 'Heizung', priceEur: null, tagline: 'Zielwerte pro Raum.' },
   outlet: { label: 'Steckdose', priceEur: null, tagline: 'Zwischenschalter, remote.' },
+  motion: { label: 'Bewegungssensor', priceEur: null, tagline: 'Präsenz + Ereignisse.' },
 };

@@ -10,6 +10,7 @@ import { RootNavigator } from '@/navigation/RootNavigator';
 import { SplashScreen } from '@/screens/SplashScreen';
 import { bootstrapServices } from '@/services/bootstrap';
 import { startMeshSimulator } from '@/services/meshSimulator';
+import { startMotionSimulator } from '@/services/motionSimulator';
 import { startSensorSimulator } from '@/services/sensorSimulator';
 
 export default function App() {
@@ -34,9 +35,11 @@ export default function App() {
     if (!isReady) return;
     const sensor = startSensorSimulator();
     const mesh = startMeshSimulator();
+    const motion = startMotionSimulator();
     return () => {
       sensor.stop();
       mesh.stop();
+      motion.stop();
     };
   }, [isReady]);
 

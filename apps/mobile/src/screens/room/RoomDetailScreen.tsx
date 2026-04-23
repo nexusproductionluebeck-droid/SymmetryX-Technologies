@@ -5,7 +5,9 @@ import { DEVICE_METADATA, isAccessory } from '@magnax/shared';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { GlassCard } from '@/components/GlassCard';
 import { BlindSlider } from '@/components/accessories/BlindSlider';
+import { CameraLiveTile } from '@/components/accessories/CameraLiveTile';
 import { FanDial } from '@/components/accessories/FanDial';
+import { MotionSensorTile } from '@/components/accessories/MotionSensorTile';
 import { WindowTile } from '@/components/accessories/WindowTile';
 import { Dimmer } from '@/components/Dimmer';
 import { useDeviceStore } from '@/store/deviceStore';
@@ -32,10 +34,12 @@ export function RoomDetailScreen({ navigation, route }: RootScreenProps<'RoomDet
         Boolean(d) && (d?.roomId ?? '').toLowerCase() === roomName.toLowerCase(),
     );
 
-  const lights = roomDevices.filter((d) => !isAccessory(d.type));
+  const lights = roomDevices.filter((d) => !isAccessory(d.type) && !d.capabilities.camera);
+  const cams = roomDevices.filter((d) => d.capabilities.camera);
   const blinds = roomDevices.filter((d) => d.type === 'blind');
   const windows = roomDevices.filter((d) => d.type === 'window');
   const fans = roomDevices.filter((d) => d.type === 'fan');
+  const motionSensors = roomDevices.filter((d) => d.type === 'motion');
 
   const anyLightOn = lights.some((l) => l.state.on);
 
@@ -62,11 +66,44 @@ export function RoomDetailScreen({ navigation, route }: RootScreenProps<'RoomDet
             </View>
             <Text style={styles.title}>{roomName}</Text>
             <Text style={styles.subtitle}>
-              {roomDevices.length} Geräte · {lights.length} Licht · {blinds.length} Jalousie ·{' '}
-              {windows.length} Fenster · {fans.length} Lüfter
+              {roomDevices.length} Geräte · {lights.length} Licht · {cams.length} Kamera ·{' '}
+              {blinds.length} Jalousie · {windows.length} Fenster · {fans.length} Lüfter ·{' '}
+              {motionSensors.length} Bewegung
             </Text>
           </View>
         </View>
+
+        {cams.length > 0 && (
+          <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
+            {cams.map((cam) => (
+              <Pressable
+                key={cam.id}
+                style={{ marginBottom: 10 }}
+                onPress={() => navigation.navigate('Camera', { deviceId: cam.id })}
+              >
+                <CameraLiveTile
+                  width={340}
+                  height={180}
+                  privacyMode={cam.state.accessory.camera?.privacyMode ?? false}
+                  streaming={cam.state.accessory.camera?.streaming ?? true}
+                  motionDetected
+                  compact
+                  label={`LIVE · ${cam.name.toUpperCase()}`}
+                />
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {motionSensors.length > 0 && (
+          <GlassCard style={styles.section} glow={motionSensors.some((m) => m.state.accessory.motionPresent)}>
+            <MotionSensorTile
+              present={motionSensors[0]!.state.accessory.motionPresent ?? false}
+              history={motionSensors[0]!.state.accessory.motionHistory ?? []}
+              name={motionSensors[0]!.name}
+            />
+          </GlassCard>
+        )}
 
         {lights.length > 0 && (
           <GlassCard style={styles.section} glow={anyLightOn}>

@@ -1,5 +1,13 @@
 import { create } from 'zustand';
-import type { AccessoryState, Device, DeviceType, SensorReading, WindowMode } from '@magnax/shared';
+import type {
+  AccessoryState,
+  CameraState,
+  Device,
+  DeviceType,
+  MotionEvent,
+  SensorReading,
+  WindowMode,
+} from '@magnax/shared';
 
 interface DeviceStoreState {
   devices: Record<string, Device>;
@@ -15,6 +23,9 @@ interface DeviceStoreState {
   setBlindPosition: (id: string, position: number) => void;
   setWindowMode: (id: string, mode: WindowMode) => void;
   setFanSpeed: (id: string, speed: number) => void;
+  recordMotionEvent: (id: string, event: MotionEvent) => void;
+  setMotionPresent: (id: string, present: boolean) => void;
+  setCamera: (id: string, patch: Partial<CameraState>) => void;
   listByType: (type: DeviceType) => Device[];
   listByRoom: (roomId: string) => Device[];
 }
@@ -110,6 +121,49 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
   setWindowMode: (id, mode) => get().setAccessory(id, { windowMode: mode }),
   setFanSpeed: (id, speed) =>
     get().setAccessory(id, { fanSpeed: Math.max(0, Math.min(100, speed)) }),
+  recordMotionEvent: (id, event) =>
+    set((state) => {
+      const device = state.devices[id];
+      if (!device) return state;
+      const previous = device.state.accessory.motionHistory ?? [];
+      const history = [event, ...previous].slice(0, 12);
+      return {
+        devices: {
+          ...state.devices,
+          [id]: {
+            ...device,
+            state: {
+              ...device.state,
+              accessory: {
+                ...device.state.accessory,
+                motionHistory: history,
+                motionPresent: true,
+              },
+            },
+          },
+        },
+      };
+    }),
+  setMotionPresent: (id, present) => get().setAccessory(id, { motionPresent: present }),
+  setCamera: (id, patch) =>
+    set((state) => {
+      const device = state.devices[id];
+      if (!device) return state;
+      const current = device.state.accessory.camera;
+      if (!current) return state;
+      return {
+        devices: {
+          ...state.devices,
+          [id]: {
+            ...device,
+            state: {
+              ...device.state,
+              accessory: { ...device.state.accessory, camera: { ...current, ...patch } },
+            },
+          },
+        },
+      };
+    }),
   listByType: (type) => Object.values(get().devices).filter((d) => d.type === type),
   listByRoom: (roomId) =>
     Object.values(get().devices).filter(

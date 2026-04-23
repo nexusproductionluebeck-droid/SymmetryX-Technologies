@@ -3,6 +3,7 @@ import {
   emptyAccessoryState,
   isAccessory,
   makeAccessoryState,
+  makeCameraState,
   type Device,
   type DeviceType,
 } from '../types/device';
@@ -44,7 +45,11 @@ export function makeMockDevice(
             recordedAt: new Date().toISOString(),
           }
         : null,
-      accessory: isAccessory(type) ? makeAccessoryState(type) : emptyAccessoryState(),
+      accessory: isAccessory(type)
+        ? makeAccessoryState(type)
+        : capabilities.camera
+          ? { ...emptyAccessoryState(), camera: makeCameraState() }
+          : emptyAccessoryState(),
     },
     firmware: {
       current: '1.0.0',
