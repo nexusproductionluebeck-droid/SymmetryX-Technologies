@@ -4,7 +4,9 @@ import { DEVICE_METADATA } from '@magnax/shared';
 
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { Button } from '@/components/Button';
+import { ExitConfirmDialog } from '@/components/ExitConfirmDialog';
 import { GlassCard } from '@/components/GlassCard';
+import { useExitGuard } from '@/hooks/useExitGuard';
 import { seedDemoLivingRoom } from '@/services/demoSeed';
 import { useDeviceStore } from '@/store/deviceStore';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -13,6 +15,7 @@ import type { RootScreenProps } from '@/navigation/types';
 export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const exitGuard = useExitGuard(true);
   // Pull the raw record + ids separately so the selector returns a stable slice
   // on each render instead of a fresh array on every simulator tick.
   const deviceRecord = useDeviceStore((s) => s.devices);
@@ -207,6 +210,16 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
           </>
         )}
       </ScrollView>
+
+      <ExitConfirmDialog
+        visible={exitGuard.showDialog}
+        onDismiss={exitGuard.dismissDialog}
+        onConfirm={() => {
+          exitGuard.confirmExit();
+          navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
+        }}
+        body="Wenn du jetzt zurück gehst, verlierst du dein aktuelles Dashboard und musst die Demo von vorne starten."
+      />
     </View>
   );
 }
