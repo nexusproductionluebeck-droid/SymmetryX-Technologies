@@ -8,6 +8,7 @@ import { ThemeProvider } from '@/theme/ThemeProvider';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { SplashScreen } from '@/screens/SplashScreen';
 import { bootstrapServices } from '@/services/bootstrap';
+import { startMeshSimulator } from '@/services/meshSimulator';
 import { startSensorSimulator } from '@/services/sensorSimulator';
 
 export default function App() {
@@ -30,8 +31,12 @@ export default function App() {
 
   useEffect(() => {
     if (!isReady) return;
-    const sim = startSensorSimulator();
-    return () => sim.stop();
+    const sensor = startSensorSimulator();
+    const mesh = startMeshSimulator();
+    return () => {
+      sensor.stop();
+      mesh.stop();
+    };
   }, [isReady]);
 
   return (

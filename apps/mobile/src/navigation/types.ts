@@ -11,6 +11,7 @@ export type RootStackParamList = {
   SetupComplete: undefined;
   Home: undefined;
   DeviceDetail: { deviceId: string };
+  Mesh: undefined;
 };
 
 export type RootScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<

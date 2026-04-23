@@ -48,11 +48,16 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
           <Text style={styles.kpiValue}>{totalPowerW.toFixed(1)}<Text style={styles.kpiSub}> W</Text></Text>
           <Text style={styles.kpiHint}>aktuell</Text>
         </GlassCard>
-        <GlassCard intensity="low" style={styles.kpi}>
-          <Text style={styles.kpiEyebrow}>MESH</Text>
-          <Text style={styles.kpiValue}>100<Text style={styles.kpiSub}>%</Text></Text>
-          <Text style={styles.kpiHint}>uptime</Text>
-        </GlassCard>
+        <Pressable style={{ flex: 1 }} onPress={() => navigation.navigate('Mesh')}>
+          <GlassCard intensity="low" style={styles.kpi}>
+            <View style={styles.kpiHeaderRow}>
+              <Text style={styles.kpiEyebrow}>MESH</Text>
+              <Text style={styles.kpiArrow}>›</Text>
+            </View>
+            <Text style={styles.kpiValue}>100<Text style={styles.kpiSub}>%</Text></Text>
+            <Text style={styles.kpiHint}>live öffnen</Text>
+          </GlassCard>
+        </Pressable>
       </View>
 
       {devices.length === 0 ? (
@@ -178,6 +183,8 @@ const styles = StyleSheet.create({
   profileDot: { width: 10, height: 10, borderRadius: 5 },
   kpiRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 8 },
   kpi: { flex: 1, padding: 14 },
+  kpiHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  kpiArrow: { color: 'rgba(232,238,243,0.45)', fontSize: 18, lineHeight: 18 },
   kpiEyebrow: {
     color: 'rgba(232,238,243,0.55)',
     fontSize: 9,

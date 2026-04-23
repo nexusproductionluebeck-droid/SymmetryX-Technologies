@@ -10,6 +10,7 @@ import { SetupTestScreen } from '@/screens/setup/SetupTestScreen';
 import { SetupCompleteScreen } from '@/screens/setup/SetupCompleteScreen';
 import { HomeScreen } from '@/screens/home/HomeScreen';
 import { DeviceDetailScreen } from '@/screens/device/DeviceDetailScreen';
+import { MeshDashboardScreen } from '@/screens/mesh/MeshDashboardScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -40,6 +41,7 @@ export function RootNavigator() {
       <Stack.Screen name="SetupComplete" component={SetupCompleteScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="DeviceDetail" component={DeviceDetailScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Mesh" component={MeshDashboardScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
