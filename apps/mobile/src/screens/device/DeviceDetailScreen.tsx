@@ -132,8 +132,8 @@ export function DeviceDetailScreen({ route, navigation }: RootScreenProps<'Devic
         )}
 
         {device.capabilities.dimming && (
-          <View style={styles.rowActions}>
-            <GlassCard intensity="low" style={styles.actionCard} glow={local.on}>
+          <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+            <GlassCard intensity="low" style={{ padding: 16 }} glow={local.on}>
               <View style={styles.switchRow}>
                 <View>
                   <Text style={styles.actionEyebrow}>Licht</Text>
@@ -151,11 +151,6 @@ export function DeviceDetailScreen({ route, navigation }: RootScreenProps<'Devic
                   trackColor={{ true: theme.palette.teal, false: 'rgba(232,238,243,0.2)' }}
                 />
               </View>
-            </GlassCard>
-
-            <GlassCard intensity="low" style={styles.actionCard}>
-              <Text style={styles.actionEyebrow}>Szene</Text>
-              <Text style={styles.actionLabel}>Wohlfühl</Text>
             </GlassCard>
           </View>
         )}

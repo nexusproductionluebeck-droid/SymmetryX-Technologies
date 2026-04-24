@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DEVICE_METADATA } from '@magnax/shared';
@@ -7,22 +8,40 @@ import { Button } from '@/components/Button';
 import { ExitConfirmDialog } from '@/components/ExitConfirmDialog';
 import { GlassCard } from '@/components/GlassCard';
 import { useExitGuard } from '@/hooks/useExitGuard';
-import { seedDemoLivingRoom } from '@/services/demoSeed';
+import { seedDemoHome } from '@/services/demoSeed';
 import { useDeviceStore } from '@/store/deviceStore';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { RootScreenProps } from '@/navigation/types';
+
+import { HomeTabs, type HomeTab } from './HomeTabs';
+import { AnalyticsTab } from './tabs/AnalyticsTab';
+import { CamerasTab } from './tabs/CamerasTab';
 
 export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const exitGuard = useExitGuard(true);
-  // Pull the raw record + ids separately so the selector returns a stable slice
-  // on each render instead of a fresh array on every simulator tick.
+
   const deviceRecord = useDeviceStore((s) => s.devices);
   const orderedIds = useDeviceStore((s) => s.orderedIds);
   const devices = orderedIds
     .map((id) => deviceRecord[id])
     .filter((d): d is NonNullable<typeof d> => Boolean(d));
+
+  const cams = devices.filter((d) => d.capabilities.camera);
+
+  const [tab, setTab] = useState<HomeTab>('rooms');
+
+  // Handle tab=mesh by navigating to the dedicated Mesh dashboard
+  // (keeps the full-screen cockpit-map experience) and immediately
+  // resetting the tab back to Räume so the user returns to a sane
+  // state.
+  useEffect(() => {
+    if (tab === 'mesh') {
+      setTab('rooms');
+      navigation.navigate('Mesh');
+    }
+  }, [tab, navigation]);
 
   const onlineCount = devices.filter((d) => d.status === 'online').length;
   const totalPowerW = devices.reduce(
@@ -30,7 +49,6 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
     0,
   );
 
-  // Group devices by room for the rooms section
   const rooms = devices.reduce<Record<string, typeof devices>>((acc, d) => {
     const key = d.roomId ?? 'Ohne Raum';
     (acc[key] ??= []).push(d);
@@ -54,7 +72,7 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
               <View style={styles.brandDot} />
               <Text style={styles.brandText}>MAGNA-X · SymmetryX</Text>
             </View>
-            <Text style={styles.greeting}>Guten Abend</Text>
+            <Text style={styles.greeting}>Dein Zuhause</Text>
           </View>
           <Pressable style={styles.profilePill} onPress={() => {}}>
             <View style={[styles.profileDot, { backgroundColor: theme.palette.teal }]} />
@@ -82,26 +100,24 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
               <Text style={styles.kpiHint}>aktuell</Text>
             </GlassCard>
           </View>
-          <Pressable style={styles.kpiSlot} onPress={() => navigation.navigate('Mesh')}>
+          <View style={styles.kpiSlot}>
             <GlassCard intensity="low" style={styles.kpi}>
-              <View style={styles.kpiHeaderRow}>
-                <Text style={styles.kpiEyebrow}>MESH</Text>
-                <Text style={styles.kpiArrow}>›</Text>
-              </View>
-              <Text style={styles.kpiValue}>
-                100<Text style={styles.kpiSub}>%</Text>
-              </Text>
-              <Text style={styles.kpiHint}>live öffnen</Text>
+              <Text style={styles.kpiEyebrow}>RÄUME</Text>
+              <Text style={styles.kpiValue}>{roomEntries.length}</Text>
+              <Text style={styles.kpiHint}>gesamt</Text>
             </GlassCard>
-          </Pressable>
+          </View>
         </View>
+
+        <HomeTabs active={tab} onChange={setTab} />
 
         {devices.length === 0 ? (
           <View style={styles.empty}>
             <GlassCard style={{ width: '100%', padding: 28, alignItems: 'center' }}>
               <Text style={styles.emptyTitle}>Noch keine Geräte</Text>
               <Text style={styles.emptyBody}>
-                Starte das Setup und verwandle den ersten Deckenpunkt in einen MAGNA-X.
+                Starte das Setup oder lade das komplette Demo-Einfamilienhaus — acht
+                Räume über drei Etagen mit über 30 Geräten.
               </Text>
               <Button
                 label="Gerät hinzufügen"
@@ -110,107 +126,30 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
               />
               <View style={{ height: 10 }} />
               <Button
-                label="Demo-Wohnzimmer laden"
+                label="Einfamilienhaus laden"
                 variant="secondary"
-                onPress={() => seedDemoLivingRoom()}
+                onPress={() => seedDemoHome()}
                 style={{ minWidth: 220 }}
               />
             </GlassCard>
           </View>
-        ) : (
-          <>
-            {roomEntries.length > 0 && (
-              <>
-                <Text style={styles.sectionHeader}>Räume</Text>
-                <View style={styles.roomsRow}>
-                  {roomEntries.map(([name, list]) => {
-                    const anyOn = list.some((d) => d.state.on);
-                    return (
-                      <Pressable
-                        key={name}
-                        style={styles.roomCardWrap}
-                        onPress={() => navigation.navigate('RoomDetail', { roomName: name })}
-                      >
-                        <GlassCard intensity={anyOn ? 'high' : 'low'} glow={anyOn} style={styles.roomCard}>
-                          <Text style={styles.roomName}>{name}</Text>
-                          <Text style={styles.roomMeta}>{list.length} Geräte</Text>
-                          <View style={styles.roomPills}>
-                            {list.slice(0, 4).map((d) => (
-                              <View key={d.id} style={styles.roomPill}>
-                                <Text style={styles.roomPillText}>
-                                  {DEVICE_METADATA[d.type].label.split(' ')[1]?.[0] ??
-                                    DEVICE_METADATA[d.type].label[0] ??
-                                    '?'}
-                                </Text>
-                              </View>
-                            ))}
-                          </View>
-                        </GlassCard>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </>
-            )}
-
-            <Text style={styles.sectionHeader}>Alle Geräte</Text>
-            <View style={styles.grid}>
-              {devices.map((item) => {
-                const meta = DEVICE_METADATA[item.type];
-                return (
-                  <Pressable
-                    key={item.id}
-                    onPress={() => navigation.navigate('DeviceDetail', { deviceId: item.id })}
-                    style={styles.gridItem}
-                  >
-                    <GlassCard
-                      intensity={item.state.on ? 'high' : 'low'}
-                      glow={item.state.on}
-                      style={{ padding: 16, minHeight: 140 }}
-                    >
-                      <View style={styles.cardTop}>
-                        <View
-                          style={[
-                            styles.cardDot,
-                            {
-                              backgroundColor:
-                                item.status === 'online' ? '#4CD294' : 'rgba(255,255,255,0.35)',
-                            },
-                          ]}
-                        />
-                        <Text style={styles.cardMeta}>
-                          {meta.label.split(' ')[1] ?? meta.label}
-                        </Text>
-                      </View>
-                      <Text style={styles.cardName}>{item.name}</Text>
-                      <Text style={styles.cardRoom}>{item.roomId ?? 'Kein Raum'}</Text>
-                      <View style={styles.cardFooter}>
-                        <Text style={styles.cardState}>
-                          {item.state.on
-                            ? `${item.state.brightness}% · ${item.state.colorTempK}K`
-                            : 'Aus'}
-                        </Text>
-                      </View>
-                    </GlassCard>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <View style={{ paddingHorizontal: 20, marginTop: 12, gap: 10 }}>
-              <Button
-                label="Weiteres Gerät hinzufügen"
-                variant="secondary"
-                onPress={() => navigation.navigate('SetupProduct')}
-              />
-              <Button
-                label="Demo-Wohnzimmer laden"
-                variant="ghost"
-                onPress={() => seedDemoLivingRoom()}
-              />
-            </View>
-          </>
-        )}
+        ) : tab === 'rooms' ? (
+          <RoomsTab
+            roomEntries={roomEntries}
+            devices={devices}
+            onOpenRoom={(name) => navigation.navigate('RoomDetail', { roomName: name })}
+            onOpenDevice={(id) => navigation.navigate('DeviceDetail', { deviceId: id })}
+            onAddDevice={() => navigation.navigate('SetupProduct')}
+            onSeed={() => seedDemoHome()}
+          />
+        ) : tab === 'cameras' ? (
+          <CamerasTab
+            cams={cams}
+            onSelect={(id) => navigation.navigate('Camera', { deviceId: id })}
+          />
+        ) : tab === 'analytics' ? (
+          <AnalyticsTab devices={devices} />
+        ) : null}
       </ScrollView>
 
       <ExitConfirmDialog
@@ -224,6 +163,126 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
       />
     </View>
   );
+}
+
+function RoomsTab({
+  roomEntries,
+  devices,
+  onOpenRoom,
+  onOpenDevice,
+  onAddDevice,
+  onSeed,
+}: {
+  roomEntries: Array<[string, ReadonlyArray<ReturnType<typeof useDeviceStore.getState>['devices'][string]>]>;
+  devices: Array<ReturnType<typeof useDeviceStore.getState>['devices'][string]>;
+  onOpenRoom: (name: string) => void;
+  onOpenDevice: (id: string) => void;
+  onAddDevice: () => void;
+  onSeed: () => void;
+}) {
+  return (
+    <>
+      {roomEntries.length > 0 && (
+        <>
+          <Text style={styles.sectionHeader}>Räume</Text>
+          <View style={styles.roomsWrap}>
+            {roomEntries.map(([name, list]) => {
+              const anyOn = list.some((d) => d && d.state.on);
+              const cams = list.filter((d) => d && d.capabilities.camera).length;
+              const motion = list.filter((d) => d && d.type === 'motion').length;
+              return (
+                <Pressable
+                  key={name}
+                  style={styles.roomCardWrap}
+                  onPress={() => onOpenRoom(name)}
+                >
+                  <GlassCard intensity={anyOn ? 'high' : 'low'} glow={anyOn} style={styles.roomCard}>
+                    <Text style={styles.roomName}>{labelFor(name)}</Text>
+                    <Text style={styles.roomMeta}>
+                      {list.length} Geräte{cams ? ` · ${cams} Cam` : ''}{motion ? ` · ${motion} Bewegung` : ''}
+                    </Text>
+                    <View style={styles.roomPills}>
+                      {list.slice(0, 5).map((d) => {
+                        if (!d) return null;
+                        const meta = DEVICE_METADATA[d.type];
+                        const letter =
+                          meta.label.split(' ')[1]?.[0] ?? meta.label[0] ?? '?';
+                        return (
+                          <View key={d.id} style={styles.roomPill}>
+                            <Text style={styles.roomPillText}>{letter.toUpperCase()}</Text>
+                          </View>
+                        );
+                      })}
+                      {list.length > 5 && (
+                        <View style={[styles.roomPill, { backgroundColor: 'transparent' }]}>
+                          <Text style={styles.roomPillText}>+{list.length - 5}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </GlassCard>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      )}
+
+      <Text style={styles.sectionHeader}>Alle Geräte</Text>
+      <View style={styles.grid}>
+        {devices.map((item) => {
+          const meta = DEVICE_METADATA[item.type];
+          return (
+            <Pressable
+              key={item.id}
+              onPress={() => onOpenDevice(item.id)}
+              style={styles.gridItem}
+            >
+              <GlassCard
+                intensity={item.state.on ? 'high' : 'low'}
+                glow={item.state.on}
+                style={{ padding: 14, minHeight: 130 }}
+              >
+                <View style={styles.cardTop}>
+                  <View
+                    style={[
+                      styles.cardDot,
+                      {
+                        backgroundColor:
+                          item.status === 'online' ? '#4CD294' : 'rgba(255,255,255,0.35)',
+                      },
+                    ]}
+                  />
+                  <Text style={styles.cardMeta}>
+                    {meta.label.split(' ')[1] ?? meta.label}
+                  </Text>
+                </View>
+                <Text style={styles.cardName} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                <Text style={styles.cardRoom} numberOfLines={1}>
+                  {labelFor(item.roomId ?? 'Kein Raum')}
+                </Text>
+              </GlassCard>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={{ paddingHorizontal: 20, marginTop: 12 }}>
+        <Button label="Weiteres Gerät hinzufügen" variant="secondary" onPress={onAddDevice} />
+        <View style={{ height: 10 }} />
+        <Button label="Einfamilienhaus nachladen" variant="ghost" onPress={onSeed} />
+      </View>
+    </>
+  );
+}
+
+function labelFor(roomId: string): string {
+  if (roomId === 'Ohne Raum') return roomId;
+  return roomId
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 const styles = StyleSheet.create({
@@ -255,7 +314,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     color: '#FFFFFF',
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '700',
     marginTop: 10,
     letterSpacing: -0.6,
@@ -274,12 +333,10 @@ const styles = StyleSheet.create({
   kpiRow: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   kpiSlot: { flex: 1, paddingHorizontal: 4 },
   kpi: { padding: 14 },
-  kpiHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  kpiArrow: { color: 'rgba(232,238,243,0.45)', fontSize: 18, lineHeight: 18 },
   kpiEyebrow: {
     color: 'rgba(232,238,243,0.55)',
     fontSize: 9,
@@ -305,15 +362,22 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
   },
-  roomsRow: {
+  roomsWrap: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: 16,
   },
-  roomCardWrap: { flex: 1, padding: 4 },
-  roomCard: { padding: 16, minHeight: 110 },
-  roomName: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
-  roomMeta: { color: 'rgba(232,238,243,0.6)', fontSize: 12, marginTop: 2 },
-  roomPills: { flexDirection: 'row', marginTop: 12 },
+  roomCardWrap: { width: '50%', padding: 4 },
+  roomCard: { padding: 14, minHeight: 124 },
+  roomName: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+    textTransform: 'capitalize',
+  },
+  roomMeta: { color: 'rgba(232,238,243,0.6)', fontSize: 11, marginTop: 4 },
+  roomPills: { flexDirection: 'row', marginTop: 12, flexWrap: 'wrap' },
   roomPill: {
     width: 22,
     height: 22,
@@ -326,29 +390,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
   },
   roomPillText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
-  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16 },
   gridItem: { width: '50%', padding: 4 },
   cardTop: { flexDirection: 'row', alignItems: 'center' },
   cardDot: { width: 7, height: 7, borderRadius: 3.5, marginRight: 6 },
   cardMeta: { color: 'rgba(232,238,243,0.55)', fontSize: 11, letterSpacing: 1.2 },
-  cardName: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '700',
-    marginTop: 10,
-    letterSpacing: -0.2,
-  },
-  cardRoom: { color: 'rgba(232,238,243,0.55)', fontSize: 12, marginTop: 2 },
-  cardFooter: { marginTop: 14 },
-  cardState: {
-    color: 'rgba(232,238,243,0.85)',
-    fontSize: 12,
-    fontVariant: ['tabular-nums'],
-  },
+  cardName: { color: '#FFFFFF', fontSize: 15, fontWeight: '700', marginTop: 8, letterSpacing: -0.2 },
+  cardRoom: { color: 'rgba(232,238,243,0.55)', fontSize: 11, marginTop: 2, textTransform: 'capitalize' },
   empty: { flex: 1, padding: 20, justifyContent: 'center' },
   emptyTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '700' },
   emptyBody: {

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { Button } from '@/components/Button';
 import { GlassCard } from '@/components/GlassCard';
-import { seedDemoLivingRoom } from '@/services/demoSeed';
+import { seedDemoHome } from '@/services/demoSeed';
 import { useDeviceStore } from '@/store/deviceStore';
 import type { RootScreenProps } from '@/navigation/types';
 
@@ -27,7 +27,7 @@ export function LoginScreen({ navigation }: RootScreenProps<'Login'>) {
   };
 
   const handleDemoJump = () => {
-    seedDemoLivingRoom();
+    seedDemoHome();
     navigation.replace('Home');
   };
 
@@ -107,11 +107,11 @@ export function LoginScreen({ navigation }: RootScreenProps<'Login'>) {
             <Text style={styles.demoBody}>
               {hasExistingDevices
                 ? 'Deine bereits eingerichteten Geräte sind gespeichert. Mit einem Tap ohne Setup ins Dashboard springen.'
-                : 'Ohne Onboarding starten — wir befüllen dein Wohnzimmer mit Licht, Sensorik, Jalousie, Fenster, Lüfter, Bewegungssensor und Kamera.'}
+                : 'Ohne Onboarding starten — wir befüllen ein komplettes Einfamilienhaus mit acht Räumen, über 30 Geräten, Kameras und Bewegungssensoren.'}
             </Text>
             <View style={{ height: 12 }} />
             <Button
-              label={hasExistingDevices ? 'Weiter zum Dashboard' : 'Demo-Wohnzimmer starten'}
+              label={hasExistingDevices ? 'Weiter zum Dashboard' : 'Einfamilienhaus laden'}
               onPress={handleDemoJump}
             />
           </GlassCard>

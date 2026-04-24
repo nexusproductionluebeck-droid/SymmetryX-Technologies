@@ -5,16 +5,15 @@ import Animated, {
   runOnJS,
   useAnimatedProps,
   useAnimatedStyle,
-  useDerivedValue,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 
 import { useTheme } from '@/theme/ThemeProvider';
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 interface Props {
   value: number;
@@ -28,13 +27,18 @@ interface Props {
   valueFormatter?: (v: number) => string;
 }
 
+const ARC_START_DEG = 130;
+const ARC_SWEEP_DEG = 280;
+
 /**
  * Radial cockpit-style dimmer. Drag anywhere on the ring to rotate
  * the knob — the arc fills clockwise, the center shows the numeric
- * value, and a spring-backed highlight snaps to the angle.
+ * value, the spring-backed highlight snaps to the angle.
  *
- * Touch math uses screen coordinates, so the gesture works from any
- * angle without the user having to start on the knob itself.
+ * Critically: both the arc fill (SVG Path with dynamic `d`) and the
+ * knob position share a single source-of-truth shared value and the
+ * exact same angle-to-coordinate math. They're guaranteed to stay
+ * synchronised frame-for-frame.
  */
 export function RadialDimmer({
   value,
@@ -52,12 +56,6 @@ export function RadialDimmer({
   const stroke = 14;
   const radius = (size - stroke) / 2;
   const center = size / 2;
-  const circumference = 2 * Math.PI * radius;
-
-  // Arc spans 280° (from 130° to 410°), leaving a 80° gap at the bottom
-  // for visual balance (like a physical dial).
-  const arcStart = 130;
-  const arcSweep = 280;
 
   const normalized = useSharedValue((value - min) / range);
 
@@ -84,13 +82,13 @@ export function RadialDimmer({
   const pan = Gesture.Pan()
     .enabled(!disabled)
     .onBegin((event) => {
-      const next = eventToNormalized(event.x, event.y, center, arcStart, arcSweep);
+      const next = eventToNormalized(event.x, event.y, center);
       normalized.value = withSpring(next, { damping: 22, stiffness: 260, mass: 0.4 });
       runOnJS(emitChange)(next);
       runOnJS(haptic)();
     })
     .onUpdate((event) => {
-      const next = eventToNormalized(event.x, event.y, center, arcStart, arcSweep);
+      const next = eventToNormalized(event.x, event.y, center);
       normalized.value = next;
       runOnJS(emitChange)(next);
     })
@@ -99,14 +97,31 @@ export function RadialDimmer({
       runOnJS(haptic)();
     });
 
-  const arcLength = useDerivedValue(() => (normalized.value * arcSweep) / 360 * circumference);
+  // Full-sweep track path (static) — drawn underneath the fill.
+  const trackPath = buildArcPath(center, center, radius, ARC_START_DEG, ARC_SWEEP_DEG);
 
-  const arcProps = useAnimatedProps(() => ({
-    strokeDasharray: [arcLength.value, circumference],
-  }));
+  // Animated fill arc. Uses the same angle math as the knob, so
+  // the knob always sits at the tip of the fill — never "ahead" or
+  // "behind".
+  const fillProps = useAnimatedProps(() => {
+    const sweep = normalized.value * ARC_SWEEP_DEG;
+    const safeSweep = Math.max(0.001, sweep);
+    const startRad = (ARC_START_DEG * Math.PI) / 180;
+    const endRad = ((ARC_START_DEG + safeSweep) * Math.PI) / 180;
+    const startX = center + radius * Math.cos(startRad);
+    const startY = center + radius * Math.sin(startRad);
+    const endX = center + radius * Math.cos(endRad);
+    const endY = center + radius * Math.sin(endRad);
+    const largeArc = safeSweep > 180 ? 1 : 0;
+    const d = `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArc} 1 ${endX} ${endY}`;
+    return {
+      d,
+      opacity: normalized.value < 0.002 ? 0 : 1,
+    };
+  });
 
   const knobStyle = useAnimatedStyle(() => {
-    const angleDeg = arcStart + normalized.value * arcSweep;
+    const angleDeg = ARC_START_DEG + normalized.value * ARC_SWEEP_DEG;
     const angleRad = (angleDeg * Math.PI) / 180;
     const x = center + radius * Math.cos(angleRad) - 18;
     const y = center + radius * Math.sin(angleRad) - 18;
@@ -121,44 +136,34 @@ export function RadialDimmer({
     <View style={[styles.wrap, { width: size, height: size }]}>
       <GestureDetector gesture={pan}>
         <View style={{ width: size, height: size }}>
-          <Svg width={size} height={size} style={{ transform: [{ rotate: '0deg' }] }}>
+          <Svg width={size} height={size}>
             <Defs>
-              <LinearGradient id="arc" x1="0" y1="0" x2={size} y2={size}>
+              <LinearGradient id="rd-arc" x1="0" y1="0" x2={size} y2={size}>
                 <Stop offset="0" stopColor={theme.palette.blue} />
                 <Stop offset="1" stopColor={theme.palette.teal} />
               </LinearGradient>
-              <LinearGradient id="track" x1="0" y1="0" x2="0" y2={size}>
-                <Stop offset="0" stopColor="rgba(232,238,243,0.08)" />
-                <Stop offset="1" stopColor="rgba(232,238,243,0.02)" />
-              </LinearGradient>
             </Defs>
 
-            {/* Track (full dial gap at bottom) */}
-            <Circle
-              cx={center}
-              cy={center}
-              r={radius}
-              stroke="url(#track)"
+            {/* Track (static full sweep) */}
+            <Path
+              d={trackPath}
+              stroke="rgba(232,238,243,0.08)"
               strokeWidth={stroke}
-              fill="none"
-              strokeDasharray={[(arcSweep / 360) * circumference, circumference]}
-              strokeDashoffset={-(arcStart - 90) / 360 * circumference}
               strokeLinecap="round"
-              transform={`rotate(${arcStart} ${center} ${center})`}
+              fill="none"
             />
 
-            {/* Value arc */}
-            <AnimatedCircle
-              cx={center}
-              cy={center}
-              r={radius}
-              stroke="url(#arc)"
+            {/* Fill (animated 0 → current sweep) */}
+            <AnimatedPath
+              animatedProps={fillProps}
+              stroke="url(#rd-arc)"
               strokeWidth={stroke}
-              fill="none"
               strokeLinecap="round"
-              transform={`rotate(${arcStart} ${center} ${center})`}
-              animatedProps={arcProps}
+              fill="none"
             />
+
+            {/* Glow dot at the centre (purely decorative) */}
+            <Circle cx={center} cy={center} r={3} fill="rgba(255,255,255,0.15)" />
           </Svg>
 
           <Animated.View style={[styles.knob, knobStyle]}>
@@ -176,30 +181,35 @@ export function RadialDimmer({
 }
 
 /**
- * Convert a touch (x, y) inside the SVG to a normalized [0,1] progress
- * along the dial arc.
- *
- * Math: atan2 → degrees → shift so 0° aligns with arc start → clamp
- * into the arc sweep.
+ * Build an SVG arc path on the JS side (for the static track).
  */
-function eventToNormalized(
-  x: number,
-  y: number,
-  center: number,
-  arcStart: number,
-  arcSweep: number,
-): number {
+function buildArcPath(
+  cx: number,
+  cy: number,
+  r: number,
+  startDeg: number,
+  sweepDeg: number,
+): string {
+  const startRad = (startDeg * Math.PI) / 180;
+  const endRad = ((startDeg + sweepDeg) * Math.PI) / 180;
+  const startX = cx + r * Math.cos(startRad);
+  const startY = cy + r * Math.sin(startRad);
+  const endX = cx + r * Math.cos(endRad);
+  const endY = cy + r * Math.sin(endRad);
+  const largeArc = sweepDeg > 180 ? 1 : 0;
+  return `M ${startX} ${startY} A ${r} ${r} 0 ${largeArc} 1 ${endX} ${endY}`;
+}
+
+function eventToNormalized(x: number, y: number, center: number): number {
   'worklet';
   const dx = x - center;
   const dy = y - center;
   let angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-  // Shift so arcStart -> 0
-  angle = (angle - arcStart + 360) % 360;
-  if (angle > arcSweep) {
-    // Snap to the nearest end of the arc
-    angle = angle - arcSweep > (360 - arcSweep) / 2 ? 0 : arcSweep;
+  angle = (angle - ARC_START_DEG + 360) % 360;
+  if (angle > ARC_SWEEP_DEG) {
+    angle = angle - ARC_SWEEP_DEG > (360 - ARC_SWEEP_DEG) / 2 ? 0 : ARC_SWEEP_DEG;
   }
-  return Math.max(0, Math.min(1, angle / arcSweep));
+  return Math.max(0, Math.min(1, angle / ARC_SWEEP_DEG));
 }
 
 const styles = StyleSheet.create({
