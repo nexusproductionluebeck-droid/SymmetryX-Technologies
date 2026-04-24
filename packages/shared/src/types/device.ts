@@ -143,7 +143,7 @@ const EMPTY_ACCESSORY_STATE: AccessoryState = {
 export function makeAccessoryState(type: AccessoryType): AccessoryState {
   switch (type) {
     case 'blind':
-      return { ...EMPTY_ACCESSORY_STATE, blindPosition: 30 };
+      return { ...EMPTY_ACCESSORY_STATE, blindPosition: 0 };
     case 'window':
       return { ...EMPTY_ACCESSORY_STATE, windowMode: 'closed' };
     case 'fan':

@@ -18,13 +18,20 @@ interface Props {
   max?: number;
   label?: string;
   disabled?: boolean;
+  /** Full width of the slider track in logical pixels. */
+  width?: number;
+  /** Hide the numeric value readout below the track. */
+  hideValue?: boolean;
 }
 
-const TRACK_WIDTH = 280;
+const KNOB_SIZE = 28;
 
 /**
  * Horizontal dimmer slider with a thick glass-like track.
  * Used for brightness (0–100) and any other 0–100 value.
+ *
+ * Width is parametric so the same primitive can be used in wide
+ * hero contexts and inside narrow cards without overflow.
  */
 export function Dimmer({
   value,
@@ -34,25 +41,16 @@ export function Dimmer({
   max = 100,
   label,
   disabled = false,
+  width = 280,
+  hideValue = false,
 }: Props) {
   const theme = useTheme();
   const range = max - min;
-  const translate = useSharedValue(((value - min) / range) * TRACK_WIDTH);
+  const trackWidth = width;
+  const translate = useSharedValue(((value - min) / range) * trackWidth);
 
-  const emit = useCallback(
-    (next: number) => {
-      onChange(next);
-    },
-    [onChange],
-  );
-
-  const commit = useCallback(
-    (next: number) => {
-      onCommit?.(next);
-    },
-    [onCommit],
-  );
-
+  const emit = useCallback((next: number) => onChange(next), [onChange]);
+  const commit = useCallback((next: number) => onCommit?.(next), [onCommit]);
   const haptic = useCallback(() => {
     void Haptics.selectionAsync();
   }, []);
@@ -65,34 +63,49 @@ export function Dimmer({
       startValue.value = translate.value;
     })
     .onUpdate((event) => {
-      const clamped = Math.max(0, Math.min(TRACK_WIDTH, startValue.value + event.translationX));
+      const clamped = Math.max(0, Math.min(trackWidth, startValue.value + event.translationX));
       translate.value = clamped;
-      const next = Math.round(min + (clamped / TRACK_WIDTH) * range);
+      const next = Math.round(min + (clamped / trackWidth) * range);
       runOnJS(emit)(next);
     })
     .onEnd(() => {
-      const next = Math.round(min + (translate.value / TRACK_WIDTH) * range);
+      const next = Math.round(min + (translate.value / trackWidth) * range);
       runOnJS(commit)(next);
       runOnJS(haptic)();
     });
 
   const fillStyle = useAnimatedStyle(() => ({ width: translate.value }));
-  const knobStyle = useAnimatedStyle(() => ({ transform: [{ translateX: translate.value - 14 }] }));
+  const knobStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translate.value - KNOB_SIZE / 2 }],
+  }));
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, { width: trackWidth + KNOB_SIZE }]}>
       {label !== undefined && (
         <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{label}</Text>
       )}
       <GestureDetector gesture={pan}>
-        <View style={[styles.track, { backgroundColor: theme.colors.surfaceRaised }]}>
+        <View
+          style={[
+            styles.track,
+            {
+              width: trackWidth,
+              backgroundColor: theme.colors.surfaceRaised,
+              marginHorizontal: KNOB_SIZE / 2,
+            },
+          ]}
+        >
           <Animated.View
             style={[styles.fill, { backgroundColor: theme.palette.teal }, fillStyle]}
           />
-          <Animated.View style={[styles.knob, { backgroundColor: theme.palette.white }, knobStyle]} />
+          <Animated.View
+            style={[styles.knob, { backgroundColor: theme.palette.white }, knobStyle]}
+          />
         </View>
       </GestureDetector>
-      <Text style={[styles.value, { color: theme.colors.textPrimary }]}>{value}%</Text>
+      {!hideValue && (
+        <Text style={[styles.value, { color: theme.colors.textPrimary }]}>{value}%</Text>
+      )}
     </View>
   );
 }
@@ -101,9 +114,8 @@ const styles = StyleSheet.create({
   wrap: { alignItems: 'center', gap: 10 },
   label: { fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' },
   track: {
-    width: TRACK_WIDTH,
-    height: 18,
-    borderRadius: 9,
+    height: 14,
+    borderRadius: 7,
     overflow: 'visible',
     justifyContent: 'center',
   },
@@ -112,19 +124,19 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    borderRadius: 9,
+    borderRadius: 7,
   },
   knob: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: KNOB_SIZE,
+    height: KNOB_SIZE,
+    borderRadius: KNOB_SIZE / 2,
     position: 'absolute',
-    top: -5,
+    top: -7,
     shadowColor: '#000',
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  value: { fontSize: 28, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  value: { fontSize: 22, fontWeight: '700', fontVariant: ['tabular-nums'] },
 });

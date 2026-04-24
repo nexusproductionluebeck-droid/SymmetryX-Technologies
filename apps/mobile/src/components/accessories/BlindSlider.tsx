@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -16,18 +16,27 @@ interface Props {
   onCommit?: (next: number) => void;
 }
 
-const WINDOW_HEIGHT = 180;
+const WINDOW_HEIGHT = 160;
 const WINDOW_WIDTH = 120;
 const SLAT_COUNT = 12;
 
+const PRESETS: ReadonlyArray<{ label: string; value: number }> = [
+  { label: 'Offen', value: 0 },
+  { label: 'Halb', value: 50 },
+  { label: 'Zu', value: 100 },
+];
+
 /**
- * Animated blind visualisation. Dragging vertically moves the roller
- * like a real blind — top = open, bottom = closed. The slats appear
- * stacked at the top when open and fully cover the window when closed.
+ * Animated blind visualisation. Same frame + slat aesthetic as
+ * before, but the control now mirrors the window tile: three
+ * segment presets (Offen / Halb / Zu) for quick states, plus a
+ * vertical drag inside the frame for fine positioning. No
+ * numeric percent readout — the silhouette speaks for itself.
  */
 export function BlindSlider({ position, onChange, onCommit }: Props) {
   const clamped = Math.max(0, Math.min(100, position));
   const translate = useSharedValue(clamped);
+  translate.value = clamped;
 
   const emit = useCallback((v: number) => onChange(Math.round(v)), [onChange]);
   const commit = useCallback(
@@ -58,13 +67,20 @@ export function BlindSlider({ position, onChange, onCommit }: Props) {
     height: (translate.value / 100) * WINDOW_HEIGHT,
   }));
 
+  const activePreset = clamped < 15 ? 0 : clamped > 85 ? 2 : 1;
+
+  const handlePreset = (value: number) => {
+    void Haptics.selectionAsync();
+    onChange(value);
+    onCommit?.(value);
+  };
+
   return (
     <View style={styles.wrap}>
       <Text style={styles.eyebrow}>JALOUSIE</Text>
 
       <GestureDetector gesture={pan}>
         <View style={styles.frame}>
-          {/* Sky / outside view */}
           <LinearGradient
             colors={['#1B3A5C', '#2E75B6', '#4DA3E0']}
             style={StyleSheet.absoluteFill}
@@ -73,38 +89,45 @@ export function BlindSlider({ position, onChange, onCommit }: Props) {
           />
           <View style={styles.horizon} />
 
-          {/* Blind roller (grows from top) */}
           <Animated.View style={[styles.roller, rollerStyle]}>
-            <LinearGradient
-              colors={['#222', '#111']}
-              style={StyleSheet.absoluteFill}
-            />
+            <LinearGradient colors={['#222', '#111']} style={StyleSheet.absoluteFill} />
             {Array.from({ length: SLAT_COUNT }).map((_, i) => (
               <View key={i} style={[styles.slat, { top: (i * WINDOW_HEIGHT) / SLAT_COUNT }]} />
             ))}
           </Animated.View>
 
-          {/* Window frame */}
           <View style={styles.frameBorder} pointerEvents="none" />
           <View style={styles.frameMullion} pointerEvents="none" />
         </View>
       </GestureDetector>
 
-      <View style={styles.valueRow}>
-        <Text style={styles.value}>{Math.round(clamped)}</Text>
-        <Text style={styles.unit}>% zu</Text>
+      <View style={styles.segments}>
+        {PRESETS.map((preset, i) => (
+          <Pressable
+            key={preset.label}
+            onPress={() => handlePreset(preset.value)}
+            style={[segmentStyles.button, activePreset === i && segmentStyles.buttonActive]}
+          >
+            <Text
+              style={[segmentStyles.label, activePreset === i && segmentStyles.labelActive]}
+            >
+              {preset.label}
+            </Text>
+          </Pressable>
+        ))}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', gap: 10 },
+  wrap: { alignItems: 'center' },
   eyebrow: {
     color: 'rgba(232,238,243,0.55)',
     fontSize: 10,
     letterSpacing: 2.5,
     fontWeight: '600',
+    marginBottom: 10,
   },
   frame: {
     width: WINDOW_WIDTH,
@@ -149,13 +172,23 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  valueRow: { flexDirection: 'row', alignItems: 'baseline' },
-  value: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.5,
-    fontVariant: ['tabular-nums'],
+  segments: { flexDirection: 'row', marginTop: 12 },
+});
+
+const segmentStyles = StyleSheet.create({
+  button: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginHorizontal: 3,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
-  unit: { color: 'rgba(232,238,243,0.55)', fontSize: 12, marginLeft: 4 },
+  buttonActive: {
+    backgroundColor: 'rgba(26,138,125,0.3)',
+    borderColor: '#1A8A7D',
+  },
+  label: { color: 'rgba(232,238,243,0.7)', fontSize: 12, fontWeight: '600' },
+  labelActive: { color: '#FFFFFF' },
 });

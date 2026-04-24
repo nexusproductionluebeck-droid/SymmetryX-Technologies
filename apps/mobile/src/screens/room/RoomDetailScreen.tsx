@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DEVICE_METADATA, isAccessory } from '@magnax/shared';
 
@@ -17,6 +17,7 @@ import type { RootScreenProps } from '@/navigation/types';
 export function RoomDetailScreen({ navigation, route }: RootScreenProps<'RoomDetail'>) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const { roomName } = route.params;
 
   const deviceRecord = useDeviceStore((s) => s.devices);
@@ -106,8 +107,8 @@ export function RoomDetailScreen({ navigation, route }: RootScreenProps<'RoomDet
         )}
 
         {lights.length > 0 && (
-          <GlassCard style={styles.section} glow={anyLightOn}>
-            <View style={styles.sectionHeader}>
+          <View style={styles.lightsBlock}>
+            <View style={styles.lightsHeader}>
               <Text style={styles.sectionTitle}>Licht</Text>
               <Switch
                 value={anyLightOn}
@@ -117,22 +118,50 @@ export function RoomDetailScreen({ navigation, route }: RootScreenProps<'RoomDet
               />
             </View>
 
-            {lights.map((l) => (
-              <View key={l.id} style={styles.lightRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.lightName}>{l.name}</Text>
-                  <Text style={styles.lightMeta}>{DEVICE_METADATA[l.type].label}</Text>
-                </View>
-                <View style={{ width: 200 }}>
-                  <Dimmer
-                    value={l.state.on ? l.state.brightness : 0}
-                    onChange={(v) => setBrightness(l.id, v)}
-                    onCommit={(v) => setOn(l.id, v > 0)}
-                  />
-                </View>
-              </View>
-            ))}
-          </GlassCard>
+            {lights.map((l) => {
+              // Each light card spans the inner section width; the dimmer
+              // track sits flush inside, scaled to the available space.
+              const cardInnerWidth = screenWidth - 40 /* section margin */ - 32 /* card padding */;
+              const dimmerWidth = Math.min(cardInnerWidth - 28 /* knob overflow */, 360);
+              return (
+                <GlassCard
+                  key={l.id}
+                  intensity={l.state.on ? 'high' : 'low'}
+                  glow={l.state.on}
+                  style={styles.lightCard}
+                >
+                  <View style={styles.lightCardHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.lightName}>{l.name}</Text>
+                      <Text style={styles.lightMeta}>{DEVICE_METADATA[l.type].label}</Text>
+                    </View>
+                    <Switch
+                      value={l.state.on}
+                      onValueChange={(v) => {
+                        setOn(l.id, v);
+                        if (v && l.state.brightness === 0) setBrightness(l.id, 60);
+                      }}
+                      thumbColor="#FFFFFF"
+                      trackColor={{ true: theme.palette.teal, false: 'rgba(232,238,243,0.2)' }}
+                    />
+                  </View>
+                  <View style={styles.lightDimmerWrap}>
+                    <Dimmer
+                      value={l.state.on ? l.state.brightness : 0}
+                      onChange={(v) => setBrightness(l.id, v)}
+                      onCommit={(v) => setOn(l.id, v > 0)}
+                      disabled={!l.state.on}
+                      width={dimmerWidth}
+                      hideValue
+                    />
+                    <Text style={styles.lightBrightnessLabel}>
+                      {l.state.on ? `${l.state.brightness}%` : 'Aus'}
+                    </Text>
+                  </View>
+                </GlassCard>
+              );
+            })}
+          </View>
         )}
 
         <View style={styles.twoColumn}>
@@ -160,7 +189,7 @@ export function RoomDetailScreen({ navigation, route }: RootScreenProps<'RoomDet
             <Text style={styles.sectionTitle}>Klima</Text>
             <View style={styles.fansRow}>
               {fans.map((f) => (
-                <View key={f.id} style={{ flex: 1, alignItems: 'center' }}>
+                <View key={f.id} style={styles.fanCell}>
                   <FanDial
                     speed={f.state.accessory.fanSpeed ?? 0}
                     onChange={(v) => setFanSpeed(f.id, v)}
@@ -243,22 +272,44 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   sectionTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  lightRow: {
+  lightsBlock: { paddingHorizontal: 20, marginBottom: 14 },
+  lightsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  lightCard: { padding: 16, marginBottom: 10 },
+  lightCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.06)',
   },
-  lightName: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  lightDimmerWrap: { alignItems: 'center', marginTop: 18 },
+  lightBrightnessLabel: {
+    color: 'rgba(232,238,243,0.75)',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 10,
+    fontVariant: ['tabular-nums'],
+    letterSpacing: 0.5,
+  },
+  lightName: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
   lightMeta: { color: 'rgba(232,238,243,0.55)', fontSize: 11, marginTop: 2 },
   twoColumn: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     marginBottom: 14,
   },
-  halfCard: { flex: 1, padding: 14, marginHorizontal: 4, alignItems: 'center' },
-  fansRow: { flexDirection: 'row', gap: 12, marginTop: 6 },
+  halfCard: {
+    flex: 1,
+    padding: 14,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    minHeight: 260,
+  },
+  fansRow: { flexDirection: 'row', marginTop: 6 },
+  fanCell: { flex: 1, alignItems: 'center', paddingHorizontal: 4 },
   fanLabel: {
     color: 'rgba(232,238,243,0.55)',
     fontSize: 11,
