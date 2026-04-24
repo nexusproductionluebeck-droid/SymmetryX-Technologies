@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -13,6 +13,8 @@ import Animated, {
 import Svg, { Circle, Defs, Line, RadialGradient, Stop } from 'react-native-svg';
 
 import { MagnaXLogoMark } from '@/components/MagnaXLogoMark';
+import { FEATURES } from '@/config/features';
+import { cancelSpeech, primeSpeechVoices, speak, speechAvailable } from '@/services/speech';
 
 interface Props {
   onDone: () => void;
@@ -21,6 +23,18 @@ interface Props {
 const DURATION_MS = 20_000;
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedLine = Animated.createAnimatedComponent(Line);
+
+interface VoiceBeat {
+  at: number; // seconds into the intro
+  text: string;
+}
+
+const VOICE_SCRIPT: VoiceBeat[] = [
+  { at: 0.6, text: 'Deine Decke.' },
+  { at: 5.2, text: 'Wird intelligent.' },
+  { at: 10.2, text: 'Ein System. Alles in einem Punkt.' },
+  { at: 16.2, text: 'MAGNA-X. Die Revolution der Deckeninfrastruktur.' },
+];
 
 /**
  * 20-second cinematic intro. A single choreographed sequence using
@@ -41,11 +55,46 @@ export function PresentationIntro({ onDone }: Props) {
 
   const clock = useSharedValue(0);
 
+  // Voice-over state. Default "on" when the browser supports it and
+  // the feature flag is up. Users can mute via the bottom-right pill.
+  const voiceSupported = speechAvailable();
+  const [voiceOn, setVoiceOn] = useState(
+    FEATURES.INTRO_VOICEOVER && voiceSupported,
+  );
+
   useEffect(() => {
     clock.value = withTiming(20, { duration: DURATION_MS, easing: Easing.linear });
     const timer = setTimeout(onDone, DURATION_MS + 200);
+    primeSpeechVoices();
     return () => clearTimeout(timer);
   }, [clock, onDone]);
+
+  // Narrate the beats. Scheduled with setTimeout relative to mount;
+  // re-schedules whenever the voice toggle flips on mid-intro.
+  useEffect(() => {
+    if (!voiceOn) {
+      cancelSpeech();
+      return;
+    }
+
+    const mountedAt = Date.now();
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    for (const beat of VOICE_SCRIPT) {
+      const msFromMount = beat.at * 1000;
+      const delay = Math.max(0, msFromMount - (Date.now() - mountedAt));
+      timers.push(
+        setTimeout(() => {
+          speak(beat.text, { lang: 'de-DE', rate: 0.92, pitch: 1.0 });
+        }, delay),
+      );
+    }
+
+    return () => {
+      timers.forEach((t) => clearTimeout(t));
+      cancelSpeech();
+    };
+  }, [voiceOn]);
 
   // Mesh ring node positions
   const meshNodes = useMemo(() => {
@@ -109,6 +158,20 @@ export function PresentationIntro({ onDone }: Props) {
       >
         <Text style={styles.skipText}>ÜBERSPRINGEN</Text>
       </Pressable>
+
+      {/* Voice toggle (only when the platform advertises speech support) */}
+      {voiceSupported && (
+        <Pressable
+          onPress={() => setVoiceOn((v) => !v)}
+          style={[styles.voiceBtn, { bottom: 44 }]}
+          hitSlop={20}
+        >
+          <View style={[styles.voiceDot, !voiceOn && styles.voiceDotOff]} />
+          <Text style={styles.voiceText}>
+            {voiceOn ? 'STIMME AN' : 'STIMME AUS'}
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -362,6 +425,39 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 2,
     fontWeight: '600',
+  },
+  voiceBtn: {
+    position: 'absolute',
+    right: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  voiceDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#1A8A7D',
+    marginRight: 8,
+    shadowColor: '#1A8A7D',
+    shadowOpacity: 0.9,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  voiceDotOff: {
+    backgroundColor: 'rgba(232,238,243,0.25)',
+    shadowOpacity: 0,
+  },
+  voiceText: {
+    color: 'rgba(232,238,243,0.8)',
+    fontSize: 10,
+    letterSpacing: 1.8,
+    fontWeight: '700',
   },
   orbitLabel: { position: 'absolute' },
   orbitText: {

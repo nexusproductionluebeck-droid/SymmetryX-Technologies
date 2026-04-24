@@ -12,4 +12,10 @@ export const FEATURES = {
    * Switch to `false` for customer-facing builds.
    */
   SHOW_PRESENTATION_INTRO: true,
+  /**
+   * Narrate the intro beats with the browser's German speech
+   * synthesis voice. If the browser blocks autoplay (iOS Safari),
+   * the user sees a sound toggle and can enable it manually.
+   */
+  INTRO_VOICEOVER: true,
 } as const;
