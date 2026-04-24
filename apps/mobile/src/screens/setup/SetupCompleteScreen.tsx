@@ -78,7 +78,7 @@ export function SetupCompleteScreen({ navigation }: RootScreenProps<'SetupComple
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#05090F' },
+  container: { flex: 1, backgroundColor: '#05090F', overflow: 'hidden' },
   stage: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
   textWrap: { alignItems: 'center', marginTop: 36, maxWidth: 360 },
   title: { color: '#FFFFFF', fontSize: 56, fontWeight: '700', letterSpacing: -2 },

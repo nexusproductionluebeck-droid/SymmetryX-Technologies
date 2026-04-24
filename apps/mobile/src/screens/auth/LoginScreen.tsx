@@ -45,6 +45,8 @@ export function LoginScreen({ navigation }: RootScreenProps<'Login'>) {
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
         >
           <Text style={styles.eyebrow}>MAGNA-X</Text>
           <Text style={styles.heading}>Willkommen zurück</Text>
@@ -120,7 +122,7 @@ export function LoginScreen({ navigation }: RootScreenProps<'Login'>) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#05090F' },
+  container: { flex: 1, backgroundColor: '#05090F', overflow: 'hidden' },
   inner: { paddingHorizontal: 24 },
   eyebrow: {
     color: 'rgba(232,238,243,0.5)',

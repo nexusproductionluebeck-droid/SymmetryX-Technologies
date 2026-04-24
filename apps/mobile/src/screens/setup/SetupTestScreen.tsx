@@ -92,7 +92,7 @@ export function SetupTestScreen({ navigation }: RootScreenProps<'SetupTest'>) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#05090F' },
+  container: { flex: 1, backgroundColor: '#05090F', overflow: 'hidden' },
   inner: { flex: 1, paddingHorizontal: 20, gap: 16 },
   eyebrow: {
     color: 'rgba(232,238,243,0.5)',

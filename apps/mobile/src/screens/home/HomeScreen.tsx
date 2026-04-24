@@ -45,6 +45,8 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
       <ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
       >
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
           <View>
@@ -225,7 +227,7 @@ export function HomeScreen({ navigation }: RootScreenProps<'Home'>) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#05090F' },
+  container: { flex: 1, backgroundColor: '#05090F', overflow: 'hidden' },
   header: {
     paddingHorizontal: 20,
     paddingBottom: 16,

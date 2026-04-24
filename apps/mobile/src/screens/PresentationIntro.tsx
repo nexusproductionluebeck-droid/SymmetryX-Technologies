@@ -346,7 +346,7 @@ function BrandReveal({ clock }: { clock: SharedValue<number> }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#05090F' },
+  container: { flex: 1, backgroundColor: '#05090F', overflow: 'hidden' },
   skip: {
     position: 'absolute',
     right: 22,

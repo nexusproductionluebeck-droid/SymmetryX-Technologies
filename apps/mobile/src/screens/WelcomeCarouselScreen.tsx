@@ -242,7 +242,7 @@ function Dot({ active }: { active: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#05090F' },
+  container: { flex: 1, backgroundColor: '#05090F', overflow: 'hidden' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

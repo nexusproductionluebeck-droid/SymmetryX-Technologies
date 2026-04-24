@@ -63,7 +63,7 @@ export class ErrorBoundary extends Component<Props, State> {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#05090F' },
+  container: { flex: 1, backgroundColor: '#05090F', overflow: 'hidden' },
   content: { padding: 24, paddingTop: 80 },
   eyebrow: {
     color: 'rgba(232,238,243,0.5)',

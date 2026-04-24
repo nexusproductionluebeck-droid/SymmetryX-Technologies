@@ -53,6 +53,8 @@ export function CameraScreen({ navigation, route }: RootScreenProps<'Camera'>) {
       <ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
       >
         <View style={[styles.topBar, { paddingTop: insets.top + 6 }]}>
           <Pressable onPress={() => navigation.goBack()} hitSlop={16} style={styles.backBtn}>
@@ -228,7 +230,7 @@ function pseudoRandom(seed: number): number {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#05090F' },
+  container: { flex: 1, backgroundColor: '#05090F', overflow: 'hidden' },
   topBar: {
     flexDirection: 'row',
     alignItems: 'flex-start',
