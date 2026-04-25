@@ -1,12 +1,14 @@
 import { create } from 'zustand';
-import type {
-  AccessoryState,
-  CameraState,
-  Device,
-  DeviceType,
-  MotionEvent,
-  SensorReading,
-  WindowMode,
+import {
+  DEFAULT_SENSOR_SETTINGS,
+  type AccessoryState,
+  type CameraState,
+  type Device,
+  type DeviceType,
+  type MotionEvent,
+  type SensorReading,
+  type SensorSettings,
+  type WindowMode,
 } from '@magnax/shared';
 
 interface DeviceStoreState {
@@ -26,6 +28,7 @@ interface DeviceStoreState {
   recordMotionEvent: (id: string, event: MotionEvent) => void;
   setMotionPresent: (id: string, present: boolean) => void;
   setCamera: (id: string, patch: Partial<CameraState>) => void;
+  setSensorSettings: (id: string, patch: Partial<SensorSettings>) => void;
   listByType: (type: DeviceType) => Device[];
   listByRoom: (roomId: string) => Device[];
 }
@@ -159,6 +162,27 @@ export const useDeviceStore = create<DeviceStoreState>((set, get) => ({
             state: {
               ...device.state,
               accessory: { ...device.state.accessory, camera: { ...current, ...patch } },
+            },
+          },
+        },
+      };
+    }),
+  setSensorSettings: (id, patch) =>
+    set((state) => {
+      const device = state.devices[id];
+      if (!device || !device.capabilities.sensors) return state;
+      const current = device.state.accessory.sensorSettings ?? DEFAULT_SENSOR_SETTINGS;
+      return {
+        devices: {
+          ...state.devices,
+          [id]: {
+            ...device,
+            state: {
+              ...device.state,
+              accessory: {
+                ...device.state.accessory,
+                sensorSettings: { ...current, ...patch },
+              },
             },
           },
         },

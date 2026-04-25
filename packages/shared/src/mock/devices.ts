@@ -1,5 +1,6 @@
 import {
   CAPABILITY_MATRIX,
+  DEFAULT_SENSOR_SETTINGS,
   emptyAccessoryState,
   isAccessory,
   makeAccessoryState,
@@ -45,11 +46,17 @@ export function makeMockDevice(
             recordedAt: new Date().toISOString(),
           }
         : null,
-      accessory: isAccessory(type)
-        ? makeAccessoryState(type)
-        : capabilities.camera
-          ? { ...emptyAccessoryState(), camera: makeCameraState() }
-          : emptyAccessoryState(),
+      accessory: (() => {
+        const base = isAccessory(type)
+          ? makeAccessoryState(type)
+          : capabilities.camera
+            ? { ...emptyAccessoryState(), camera: makeCameraState() }
+            : emptyAccessoryState();
+        if (capabilities.sensors) {
+          return { ...base, sensorSettings: { ...DEFAULT_SENSOR_SETTINGS } };
+        }
+        return base;
+      })(),
     },
     firmware: {
       current: '1.0.0',

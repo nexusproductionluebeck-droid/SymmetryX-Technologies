@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DEVICE_METADATA, toCapsWithBrand } from '@magnax/shared';
+import { DEFAULT_SENSOR_SETTINGS, DEVICE_METADATA, toCapsWithBrand } from '@magnax/shared';
 
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { Button } from '@/components/Button';
@@ -11,7 +11,10 @@ import { GlassCard } from '@/components/GlassCard';
 import { LightHalo } from '@/components/LightHalo';
 import { RadialDimmer } from '@/components/RadialDimmer';
 import { SensorPanel } from '@/components/sensors/SensorPanel';
+import { AiInsightsCard } from '@/components/sensors/AiInsightsCard';
+import { SensorSettingsCard } from '@/components/sensors/SensorSettingsCard';
 import { MotionSensorTile } from '@/components/accessories/MotionSensorTile';
+import { generateAiInsights } from '@/services/aiEngine';
 import { getMqttService } from '@/services/mqtt';
 import { useDeviceStore } from '@/store/deviceStore';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -25,6 +28,15 @@ export function DeviceDetailScreen({ route, navigation }: RootScreenProps<'Devic
   const setBrightness = useDeviceStore((s) => s.setBrightness);
   const setColorTemp = useDeviceStore((s) => s.setColorTemp);
   const setOn = useDeviceStore((s) => s.setOn);
+  const setSensorSettings = useDeviceStore((s) => s.setSensorSettings);
+
+  const sensorSettings =
+    device?.state.accessory.sensorSettings ?? DEFAULT_SENSOR_SETTINGS;
+
+  const aiInsights = useMemo(
+    () => (device ? generateAiInsights(device) : []),
+    [device],
+  );
 
   const [local, setLocal] = useState(() => ({
     on: device?.state.on ?? false,
@@ -125,34 +137,32 @@ export function DeviceDetailScreen({ route, navigation }: RootScreenProps<'Devic
           </View>
         )}
 
-        {device.capabilities.sensors && (
-          <View style={{ marginBottom: 16 }}>
-            <SensorPanel reading={device.state.sensors} />
-          </View>
-        )}
-
+        {/* ─── LICHT-SEKTION ─────────────────────────────────────── */}
         {device.capabilities.dimming && (
-          <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-            <GlassCard intensity="low" style={{ padding: 16 }} glow={local.on}>
-              <View style={styles.switchRow}>
-                <View>
-                  <Text style={styles.actionEyebrow}>Licht</Text>
-                  <Text style={styles.actionLabel}>{local.on ? 'An' : 'Aus'}</Text>
+          <>
+            <SectionHeader label="Licht" />
+            <View style={{ paddingHorizontal: 20, marginBottom: 10 }}>
+              <GlassCard intensity="low" style={{ padding: 16 }} glow={local.on}>
+                <View style={styles.switchRow}>
+                  <View>
+                    <Text style={styles.actionEyebrow}>Licht</Text>
+                    <Text style={styles.actionLabel}>{local.on ? 'An' : 'Aus'}</Text>
+                  </View>
+                  <Switch
+                    value={local.on}
+                    onValueChange={(v) => {
+                      const next = { on: v, brightness: v && local.brightness === 0 ? 60 : local.brightness };
+                      setLocal((prev) => ({ ...prev, ...next }));
+                      setOn(device.id, v);
+                      pushCommand(v ? { on: true, brightness: next.brightness } : { on: false });
+                    }}
+                    thumbColor="#FFFFFF"
+                    trackColor={{ true: theme.palette.teal, false: 'rgba(232,238,243,0.2)' }}
+                  />
                 </View>
-                <Switch
-                  value={local.on}
-                  onValueChange={(v) => {
-                    const next = { on: v, brightness: v && local.brightness === 0 ? 60 : local.brightness };
-                    setLocal((prev) => ({ ...prev, ...next }));
-                    setOn(device.id, v);
-                    pushCommand(v ? { on: true, brightness: next.brightness } : { on: false });
-                  }}
-                  thumbColor="#FFFFFF"
-                  trackColor={{ true: theme.palette.teal, false: 'rgba(232,238,243,0.2)' }}
-                />
-              </View>
-            </GlassCard>
-          </View>
+              </GlassCard>
+            </View>
+          </>
         )}
 
         {device.capabilities.colorTemperature && (
@@ -175,8 +185,36 @@ export function DeviceDetailScreen({ route, navigation }: RootScreenProps<'Devic
           </GlassCard>
         )}
 
+        {/* ─── SENSORIK-SEKTION ─────────────────────────────────── */}
+        {device.capabilities.sensors && (
+          <>
+            <SectionHeader label="Sensorik" />
+            <View style={{ marginBottom: 12 }}>
+              <SensorPanel reading={device.state.sensors} />
+            </View>
+
+            <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+              <AiInsightsCard
+                active={sensorSettings.aiPatternDetection}
+                onActivate={() =>
+                  setSensorSettings(device.id, { aiPatternDetection: true })
+                }
+                insights={aiInsights}
+              />
+            </View>
+
+            <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
+              <SensorSettingsCard
+                settings={sensorSettings}
+                onChange={(patch) => setSensorSettings(device.id, patch)}
+              />
+            </View>
+          </>
+        )}
+
+        {/* ─── GERÄTE-META ──────────────────────────────────────── */}
+        <SectionHeader label="Gerät" />
         <GlassCard style={styles.section}>
-          <Text style={styles.sectionTitle}>Gerät</Text>
           <MetaRow label="MAC" value={device.macAddress} />
           <MetaRow label="Firmware" value={device.firmware.current} />
           <MetaRow label="Status" value={device.status} />
@@ -192,6 +230,15 @@ export function DeviceDetailScreen({ route, navigation }: RootScreenProps<'Devic
           MAGNA-X · engineered by SymmetryX Technologies
         </Text>
       </ScrollView>
+    </View>
+  );
+}
+
+function SectionHeader({ label }: { label: string }) {
+  return (
+    <View style={sectionHeaderStyles.wrap}>
+      <View style={sectionHeaderStyles.dot} />
+      <Text style={sectionHeaderStyles.text}>{label.toUpperCase()}</Text>
     </View>
   );
 }
@@ -304,4 +351,31 @@ const statusStyles = StyleSheet.create({
     marginTop: 8,
   },
   dotInner: { width: 6, height: 6, borderRadius: 3 },
+});
+
+const sectionHeaderStyles = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#1A8A7D',
+    marginRight: 8,
+    shadowColor: '#1A8A7D',
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  text: {
+    color: 'rgba(232,238,243,0.7)',
+    fontSize: 10,
+    letterSpacing: 2.5,
+    fontWeight: '700',
+  },
 });

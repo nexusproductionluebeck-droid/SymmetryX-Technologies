@@ -112,6 +112,7 @@ export interface SensorSettings {
   temperatureAlert: boolean;
   smokeAlarm: boolean;
   presenceLogging: boolean;
+  aiPatternDetection: boolean;
 }
 
 export const DEFAULT_SENSOR_SETTINGS: SensorSettings = {
@@ -120,7 +121,32 @@ export const DEFAULT_SENSOR_SETTINGS: SensorSettings = {
   temperatureAlert: false,
   smokeAlarm: true,
   presenceLogging: true,
+  aiPatternDetection: true,
 };
+
+/**
+ * A single pattern surfaced by the MAGNA-X AI on-device pattern
+ * recogniser. Produced locally from time-series sensor data.
+ */
+export type AiInsightKind =
+  | 'air-quality-trend'
+  | 'temperature-drift'
+  | 'occupancy-routine'
+  | 'smoke-anomaly'
+  | 'energy-optimisation'
+  | 'motion-schedule';
+
+export type AiInsightTone = 'info' | 'advisory' | 'alert';
+
+export interface AiInsight {
+  id: string;
+  kind: AiInsightKind;
+  tone: AiInsightTone;
+  title: string;
+  body: string;
+  detectedAt: string;
+  confidence: number; // 0..1
+}
 
 export interface AccessoryState {
   /** Blind position 0 (fully open) – 100 (fully closed). */
@@ -139,6 +165,8 @@ export interface AccessoryState {
   motionHistory: MotionEvent[] | null;
   /** Camera stream + privacy state (used by MAGNA-X Cam). */
   camera: CameraState | null;
+  /** Per-device Sense configuration (checkbox toggles). */
+  sensorSettings: SensorSettings | null;
 }
 
 export interface DeviceState {
@@ -159,6 +187,7 @@ const EMPTY_ACCESSORY_STATE: AccessoryState = {
   motionPresent: null,
   motionHistory: null,
   camera: null,
+  sensorSettings: null,
 };
 
 export function makeAccessoryState(type: AccessoryType): AccessoryState {
