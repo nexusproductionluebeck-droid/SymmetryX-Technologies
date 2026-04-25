@@ -11,5 +11,5 @@ export const FEATURES = {
    * Play the 20-second cinematic intro before the app's splash.
    * Switch to `false` for customer-facing builds.
    */
-  SHOW_PRESENTATION_INTRO: true,
+  SHOW_PRESENTATION_INTRO: false,
 } as const;
