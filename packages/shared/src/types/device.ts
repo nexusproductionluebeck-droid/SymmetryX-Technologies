@@ -101,6 +101,27 @@ export interface CameraState {
   lastSnapshotAt: string | null;
 }
 
+/**
+ * User-controllable toggles for a Sense module's *sensor* side of
+ * the device. Strictly separate from the device's *light* side
+ * (which is governed by `DeviceState.on / brightness / colorTempK`).
+ */
+export interface SensorSettings {
+  motionDetection: boolean;
+  airQualityAlert: boolean;
+  temperatureAlert: boolean;
+  smokeAlarm: boolean;
+  presenceLogging: boolean;
+}
+
+export const DEFAULT_SENSOR_SETTINGS: SensorSettings = {
+  motionDetection: true,
+  airQualityAlert: true,
+  temperatureAlert: false,
+  smokeAlarm: true,
+  presenceLogging: true,
+};
+
 export interface AccessoryState {
   /** Blind position 0 (fully open) – 100 (fully closed). */
   blindPosition: number | null;

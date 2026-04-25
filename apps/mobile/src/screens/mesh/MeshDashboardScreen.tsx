@@ -1,32 +1,44 @@
 import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useWindowDimensions } from 'react-native';
 
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { GlassCard } from '@/components/GlassCard';
-import { MeshMap } from '@/components/mesh/MeshMap';
+import { HouseMeshMap } from '@/components/mesh/HouseMeshMap';
 import { useDeviceStore } from '@/store/deviceStore';
 import type { RootScreenProps } from '@/navigation/types';
 
 export function MeshDashboardScreen({ navigation }: RootScreenProps<'Mesh'>) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const devices = useDeviceStore((s) => s.orderedIds.map((id) => s.devices[id]!));
 
-  const mapSize = Math.min(width - 32, 360);
+  // Defensive selector — orderedIds + devices may be transiently
+  // out of sync after a bulk seed; filter undefined to avoid the
+  // non-null assertion crash.
+  const deviceRecord = useDeviceStore((s) => s.devices);
+  const orderedIds = useDeviceStore((s) => s.orderedIds);
+  const devices = orderedIds
+    .map((id) => deviceRecord[id])
+    .filter((d): d is NonNullable<typeof d> => Boolean(d));
+
+  const mapWidth = Math.min(width - 32, 420);
+  const mapHeight = 360;
 
   const stats = useMemo(() => {
     const meshCapable = devices.filter((d) => d.capabilities.mesh);
     const online = devices.filter((d) => d.status === 'online').length;
     const warnings = devices.filter((d) => d.status === 'warning').length;
-    const avgRssi = meshCapable.length
-      ? Math.round(
-          meshCapable.reduce((sum, d) => sum + (d.mesh?.rssiDbm ?? 0), 0) / meshCapable.length,
-        )
-      : 0;
+    const rssiSum = meshCapable.reduce((sum, d) => sum + (d.mesh?.rssiDbm ?? 0), 0);
+    const avgRssi = meshCapable.length ? Math.round(rssiSum / meshCapable.length) : 0;
     const throughputMbps = meshCapable.reduce((sum, d) => sum + (d.mesh?.uplinkMbps ?? 0), 0);
-    return { online, total: devices.length, warnings, avgRssi, meshCapableCount: meshCapable.length, throughputMbps };
+    return {
+      online,
+      total: devices.length,
+      warnings,
+      avgRssi,
+      meshCapableCount: meshCapable.length,
+      throughputMbps,
+    };
   }, [devices]);
 
   return (
@@ -48,20 +60,21 @@ export function MeshDashboardScreen({ navigation }: RootScreenProps<'Mesh'>) {
               <View style={styles.brandDot} />
               <Text style={styles.brandText}>MESH · MAGNA-X</Text>
             </View>
-            <Text style={styles.title}>Netzwerk lebt</Text>
+            <Text style={styles.title}>Decke atmet</Text>
             <Text style={styles.subtitle}>
-              Jeder Deckenpunkt routet. Das WLAN heilt sich selbst.
+              Jeder Deckenpunkt im Haus routet. Pulse zeigen lebende Verbindungen.
             </Text>
           </View>
         </View>
 
         <View style={styles.mapWrap}>
-          <MeshMap devices={devices} size={mapSize} />
-          <View style={styles.legend}>
-            <LegendDot color="#1A8A7D" label="Online" />
-            <LegendDot color="#E09A46" label="Warnung" />
-            <LegendDot color="#D6584E" label="Offline" />
-          </View>
+          <HouseMeshMap devices={devices} width={mapWidth} height={mapHeight} />
+        </View>
+
+        <View style={styles.legendRow}>
+          <LegendDot color="#1A8A7D" label="Online" />
+          <LegendDot color="#E09A46" label="Warnung" />
+          <LegendDot color="rgba(255,255,255,0.2)" label="Idle" />
         </View>
 
         <View style={styles.kpiRow}>
@@ -87,8 +100,7 @@ export function MeshDashboardScreen({ navigation }: RootScreenProps<'Mesh'>) {
           <GlassCard intensity="low" style={styles.kpi}>
             <Text style={styles.kpiEyebrow}>UPTIME</Text>
             <Text style={styles.kpiValue}>
-              99.94
-              <Text style={styles.kpiSub}> %</Text>
+              99.94<Text style={styles.kpiSub}> %</Text>
             </Text>
             <Text style={styles.kpiHint}>letzte 30 Tage</Text>
           </GlassCard>
@@ -104,15 +116,13 @@ export function MeshDashboardScreen({ navigation }: RootScreenProps<'Mesh'>) {
 
         <GlassCard style={styles.insightCard}>
           <Text style={styles.insightEyebrow}>LETZTE EREIGNISSE</Text>
-          <InsightRow tone="ok" text="Mesh self-heal: Pfad über Knoten 3 neu geroutet" time="vor 2 Min" />
-          <InsightRow tone="info" text="Neuer Knoten beigetreten · automatisch eingebunden" time="vor 18 Min" />
+          <InsightRow tone="ok" text="Mesh self-heal: Pfad über Schlafzimmer-Knoten neu geroutet" time="vor 2 Min" />
+          <InsightRow tone="info" text="Neuer Knoten in Garage beigetreten · automatisch eingebunden" time="vor 18 Min" />
           <InsightRow tone="ok" text="Firmware-Rollout abgeschlossen auf allen Knoten" time="heute, 08:44" />
-          <InsightRow tone="warn" text="Schwaches Signal im Flur — Mesh-Knoten empfohlen" time="gestern" />
+          <InsightRow tone="warn" text="Schwaches Signal im KG — Mesh-Knoten empfohlen" time="gestern" />
         </GlassCard>
 
-        <Text style={styles.signature}>
-          MAGNA-X · engineered by SymmetryX Technologies
-        </Text>
+        <Text style={styles.signature}>MAGNA-X · engineered by SymmetryX Technologies</Text>
       </ScrollView>
     </View>
   );
@@ -153,7 +163,6 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
@@ -166,14 +175,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
+    marginRight: 12,
   },
   backGlyph: { color: '#FFFFFF', fontSize: 28, marginTop: -4 },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  brandRow: { flexDirection: 'row', alignItems: 'center' },
   brandDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: '#1A8A7D',
+    marginRight: 6,
     shadowColor: '#1A8A7D',
     shadowOpacity: 0.9,
     shadowRadius: 8,
@@ -187,17 +198,29 @@ const styles = StyleSheet.create({
   },
   title: { color: '#FFFFFF', fontSize: 26, fontWeight: '700', marginTop: 6, letterSpacing: -0.5 },
   subtitle: { color: 'rgba(232,238,243,0.55)', fontSize: 13, marginTop: 4, lineHeight: 18 },
-  mapWrap: { alignItems: 'center', gap: 12, marginTop: 4, marginBottom: 18 },
-  legend: { flexDirection: 'row', gap: 16 },
-  kpiRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 10 },
-  kpi: { flex: 1, padding: 14 },
+  mapWrap: { alignItems: 'center', marginBottom: 12 },
+  legendRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 14,
+  },
+  kpiRow: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 10 },
+  kpi: { flex: 1, padding: 14, marginHorizontal: 4 },
   kpiEyebrow: {
     color: 'rgba(232,238,243,0.55)',
     fontSize: 10,
     letterSpacing: 2.5,
     fontWeight: '600',
   },
-  kpiValue: { color: '#FFFFFF', fontSize: 28, fontWeight: '700', marginTop: 6, letterSpacing: -1, fontVariant: ['tabular-nums'] },
+  kpiValue: {
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: '700',
+    marginTop: 6,
+    letterSpacing: -1,
+    fontVariant: ['tabular-nums'],
+  },
   kpiSub: { color: 'rgba(232,238,243,0.55)', fontSize: 13, fontWeight: '500' },
   kpiHint: { color: 'rgba(232,238,243,0.45)', fontSize: 11, marginTop: 2 },
   insightCard: { marginHorizontal: 20, marginTop: 6, padding: 18 },
@@ -219,20 +242,19 @@ const styles = StyleSheet.create({
 });
 
 const legendStyles = StyleSheet.create({
-  item: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dot: { width: 7, height: 7, borderRadius: 4 },
+  item: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 8 },
+  dot: { width: 7, height: 7, borderRadius: 4, marginRight: 6 },
   label: { color: 'rgba(232,238,243,0.55)', fontSize: 11, letterSpacing: 1 },
 });
 
 const insightStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    gap: 12,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
-  dot: { width: 7, height: 7, borderRadius: 4, marginTop: 6 },
+  dot: { width: 7, height: 7, borderRadius: 4, marginTop: 6, marginRight: 12 },
   text: { color: '#FFFFFF', fontSize: 13, lineHeight: 18 },
   time: { color: 'rgba(232,238,243,0.45)', fontSize: 11, marginTop: 2, letterSpacing: 0.5 },
 });
