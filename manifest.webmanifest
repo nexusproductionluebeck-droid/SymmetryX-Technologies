@@ -1,0 +1,25 @@
+{
+  "name": "MAGNA-X",
+  "short_name": "MAGNA-X",
+  "description": "MAGNA-X by SymmetryX Technologies — die Revolution der Deckeninfrastruktur.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#05090F",
+  "theme_color": "#1B3A5C",
+  "icons": [
+    {
+      "src": "/assets/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
